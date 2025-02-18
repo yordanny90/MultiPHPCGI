@@ -1,0 +1,1 @@
+powershell -Command "(Get-WmiObject Win32_Process | Where-Object { $_.ProcessName -like '%1' -and $_.Path -like '%2' } | Select-Object ProcessId, ProcessName, Path, CommandLine | ConvertTo-Csv -NoTypeInformation)"
