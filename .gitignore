@@ -1,5 +1,6 @@
-/bin/
 /.idea/
 /.vscode/
 /.history/
 /tmp/
+/bin/php/
+/bin/nginx/

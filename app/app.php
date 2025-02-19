@@ -1,7 +1,8 @@
 <?php
 if(php_sapi_name()!=='cli') return;
 require __DIR__.'/init.php';
-$server='localhost:8000';
+$port=file_get_contents(__DIR__.'/port.txt');
+$server='localhost:'.$port;
 if(isset($argv[1])){
     if($argv[1]=='service-start'){
         $done=Manager::service_start();
@@ -16,8 +17,6 @@ if(isset($argv[1])){
     }
     elseif($argv[1]=='app-stop'){
         $done=Manager::app_stop();
-        echo $done?'DONE':'ERROR';
-        echo "\n";
     }
     elseif($argv[1]=='app-open'){
         $cli=EasyCLI::newCleanEnv('start http://'.$server);
@@ -31,8 +30,6 @@ if(isset($argv[1])){
     }
     elseif($argv[1]=='php-stop'){
         $done=Manager::php_stop();
-        echo $done?'DONE':'ERROR';
-        echo "\n";
     }
     else{
         echo "Opcion invalida\n";
@@ -41,12 +38,14 @@ if(isset($argv[1])){
     exit();
 }
 
+if(!is_numeric($port)){
+    exit(1);
+}
 # Bloqueo del proceso
 $lockfile=Manager::lock_file();
 $lock=fopen($lockfile, 'a');
 if(!$lock) return false;
-$locked=flock($lock, LOCK_EX|LOCK_NB);
-if(!$locked){
+if(!flock($lock, LOCK_EX|LOCK_NB)){
     exit(1);
 }
 $service=EasyCLI::newCleanEnv([PHP_BINARY, '-S', $server, '-t', BASEDIR], ROOT_DIR)->open();
@@ -54,9 +53,14 @@ if(!$service){
     exit(1);
 }
 $pid=$service->pid().','.getmypid();
+echo "Servicio iniciado ".$pid."\n";
+$service->in_close();
+$service->out_close();
+$service->err_close();
 fseek($lock, 0);
 ftruncate($lock, 0);
 fwrite($lock, $pid);
+$inodo=fstat($lock)['ino'];
 register_shutdown_function(function()use($service, $lock, $lockfile, $pid){
     $service->terminate();
     flock($lock, LOCK_UN);
@@ -68,11 +72,18 @@ register_shutdown_function(function()use($service, $lock, $lockfile, $pid){
         unlink($lockfile);
     }
 });
-do{
-    sleep(3);
+$sleep=20;
+while(1){
+    sleep($sleep);
+    if(!$service->is_running()) break;
     clearstatcache(true, $lockfile);
     $ino=@fileinode($lockfile);
-    if(!$ino || $ino!=(fstat($lock)['ino'])){
+    if(!$ino || $ino!=$inodo){
+        $lock=null;
+        if(($lock=fopen($lockfile, 'a')) && flock($lock, LOCK_EX|LOCK_NB) && ftruncate($lock, 0) && fwrite($lock, $pid)){
+            $inodo=fstat($lock)['ino'];
+            continue;
+        }
         break;
     }
-} while($service->is_running());
+}

@@ -87,37 +87,78 @@ class Manager{
         return $out;
     }
 
+    static function preg_list(array $data): string{
+        return implode('|', array_map('preg_quote', array_filter($data, 'is_scalar')));
+    }
+
     /**
      * @param string $origin
      * @param array $update
      * @param string|null $dest
      * @return bool|resource|null
      */
-    static function update_ini(string $origin, array $update=[], ?string $dest=null){
+    static function update_ini(string $origin, array $update=[], array $comment=[], array $uncomment=[], ?string $dest=null, $verbose=false){
         $orig=fopen($origin, 'r+');
         if(!$orig) $orig=fopen($origin, 'w+');
         if(!$orig) return null;
         $buffer=tmpfile();
         if(!$buffer) return null;
-        if(!count($update)) return null;
-        $sets=array_filter($update, function($v){return !is_array($v);});
+        $sets=array_filter($update, 'is_scalar');
+        $com=self::preg_list($comment);
+        $uncom=self::preg_list($uncomment);
         $keySets=array_keys($sets);
         $update=array_filter($update, 'is_array');
+        $comment=array_map([self::class, 'preg_list'], array_filter($comment, 'is_array'));
+        $uncomment=array_map([self::class, 'preg_list'], array_filter($uncomment, 'is_array'));
         $saved=0;
+        $posA=0;
+        $group=$groupV='';
         while(!is_bool($pos=ftell($orig)) && is_string($line=fgets($orig))){
-            if(trim($line)==='' || preg_match('/^\s*\;/', $line)){
+            if(trim($line)===''){
+                $posA=$pos;
                 continue;
             }
-            $posB=ftell($orig);
+            if(preg_match('/^\s*\;/', $line)){
+                $posA=$pos;
+                if($uncom && preg_match('/^\;('.$uncom.')\s*(.|$)/', $line, $match)){
+                    if(($match[2]=='=' && strstr($match[1], '=')===false) || (in_array($match[2], ['', ';']) && strstr($match[1], '=')!==false)){
+                        $posB=ftell($orig);
+                        $length=$posA-$saved;
+                        if($length>0){
+                            if(fseek($orig, $saved)!=0 || stream_copy_to_stream($orig, $buffer, $length, $saved)===false) return null;
+                        }
+                        $out=substr($line, 1);
+                        if($verbose){
+                            echo $groupV.$out;
+                            $groupV='';
+                        }
+                        if(fwrite($buffer, $out)===false) return null;
+                        unset($out);
+                        $saved=$posA=$posB;
+                        if(fseek($orig, $saved)!==0) return null;
+                        continue;
+                    }
+                }
+                continue;
+            }
             if(preg_match('/^\s*\[([^\];]*)\]/', $line, $match)){
+                $posB=ftell($orig);
                 $group=$match[1];
-                if(fseek($orig, $saved)!==0) return null;
-                if(($length=$pos-$saved)>0 && stream_copy_to_stream($orig, $buffer, $length)===false) return null;
+                $length=$posA-$saved;
+                if($length>0){
+                    if(fseek($orig, $saved)!=0 || stream_copy_to_stream($orig, $buffer, $length, $saved)===false) return null;
+                }
                 $out=self::data2ini($sets);
                 if($out!==''){
+                    if($verbose){
+                        echo $groupV.$out;
+                    }
                     if(fwrite($buffer, $out)===false) return null;
                 }
                 unset($out);
+                $groupV='['.$group.']'.PHP_EOL;
+                $com=$comment[$group]??null;
+                $uncom=$uncomment[$group]??null;
                 if(isset($update[$group])){
                     $sets=$update[$group];
                     $keySets=array_keys($sets);
@@ -126,44 +167,81 @@ class Manager{
                 else{
                     $sets=$keySets=[];
                 }
-                $saved=$pos;
-                $pos=$posB;
-                if(fseek($orig, $saved)!==0) return null;
-                if(($length=$pos-$saved)>0 && stream_copy_to_stream($orig, $buffer, $length)===false) return null;
-                $saved=$pos=$posB;
+                $saved=$posA;
+                $posA=$posB;
+                $length=$posA-$saved;
+                if($length>0){
+                    if(fseek($orig, $saved)!=0 || stream_copy_to_stream($orig, $buffer, $length, $saved)===false) return null;
+                }
+                $saved=$posA=$posB;
                 if(fseek($orig, $saved)!==0) return null;
                 continue;
             }
+            if($com && preg_match('/^('.$com.')\s*(.|$)/', $line, $match)){
+                if(($match[2]=='=' && strstr($match[1], '=')===false) || (in_array($match[2], ['', ';']) && strstr($match[1], '=')!==false)){
+                    $posA=$pos;
+                    $posB=ftell($orig);
+                    $length=$posA-$saved;
+                    if($length>0){
+                        if(fseek($orig, $saved)!=0 || stream_copy_to_stream($orig, $buffer, $length, $saved)===false) return null;
+                    }
+                    $out=';'.$line;
+                    if($verbose){
+                        echo $groupV.$out;
+                        $groupV='';
+                    }
+                    if(fwrite($buffer, $out)===false) return null;
+                    unset($out);
+                    $saved=$posA=$posB;
+                    if(fseek($orig, $saved)!==0) return null;
+                    continue;
+                }
+            }
             if($keySets && preg_match('/^\s*([^=]+)\s*=\s*/', $line, $match) && in_array($match[1], $keySets)){
-                if(fseek($orig, $saved)!==0) return null;
-                if(($length=$pos-$saved)>0 && stream_copy_to_stream($orig, $buffer, $length)===false) return null;
+                $posA=$pos;
+                $posB=ftell($orig);
+                $length=$posA-$saved;
+                if($length>0){
+                    if(fseek($orig, $saved)!=0 || stream_copy_to_stream($orig, $buffer, $length, $saved)===false) return null;
+                }
                 $out=self::data2ini([
                     $match[1]=>$sets[$match[1]] ?? null,
                 ]);
                 unset($sets[$match[1]]);
                 if($out!==''){
+                    if($verbose){
+                        echo $groupV.$out;
+                        $groupV='';
+                    }
                     if(fwrite($buffer, $out)===false) return null;
                 }
                 unset($out);
-                $saved=$pos=$posB;
+                $saved=$posA=$posB;
                 if(fseek($orig, $saved)!==0) return null;
                 continue;
             }
         }
-        if(fseek($orig, $saved)!==0) return null;
-        if(($length=$pos-$saved)>0 && stream_copy_to_stream($orig, $buffer, $length)===false) return null;
+        $length=ftell($orig)-$saved;
+        if($length>0){
+            if(fseek($orig, $saved)!=0 || stream_copy_to_stream($orig, $buffer, null, $saved)===false) return null;
+        }
         $out=self::data2ini($sets);
         if($out!==''){
+            $out=PHP_EOL.$out;
+            if($verbose){
+                echo $groupV.$out;
+            }
             if(fwrite($buffer, $out)===false) return null;
         }
-        unset($out);
         foreach($update as $group=>$s){
             $out=self::data2ini($s);
             if($out!==''){
-                if(fwrite($buffer, PHP_EOL.'['.$group.']'.PHP_EOL)===false) return null;
+                $out=PHP_EOL.'['.$group.']'.PHP_EOL.$out;
+                if($verbose) echo $out;
                 if(fwrite($buffer, $out)===false) return null;
             }
         }
+        unset($out);
         fseek($buffer, 0);
         fclose($orig);
         if($dest!==null){
@@ -232,7 +310,7 @@ class Manager{
     }
 
     static function hidec_bin(){
-        $bin=ROOT_DIR.'\\bin\\hidec.exe';
+        $bin=ROOT_DIR.'\\bin\\hidec\\hidec.exe';
         if(!is_file($bin)) return null;
         return $bin;
     }
@@ -298,14 +376,14 @@ class Manager{
     static function app_stop(){
         $pid=self::lock_pid();
         if(count($pid)==0) return true;
-        $list=self::getProcessMyDir('php.exe', $pid);
+        $list=self::getProcessMyDir(['php.exe','php-win.exe'], $pid);
         if(count($list)!=count($pid)) return true;
         if(!self::taskkill(...$pid)) return false;
         return true;
     }
 
     static function php_stop(){
-        $list=self::getProcessMyDir('php.exe');
+        $list=self::getProcessMyDir(['php.exe','php-win.exe']);
         if(count($list)==0) return true;
         $mypid=getmypid();
         $list=array_column(array_filter($list, function($row)use($mypid){

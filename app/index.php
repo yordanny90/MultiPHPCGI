@@ -65,10 +65,33 @@ class index{
             echo '<h1>Archivo no encontrado</h1>';
             return;
         }
+        ob_start();
+        $res=Manager::update_ini($file, [
+        ],[
+            'PHP'=>[
+                'extension_dir',
+                'extension',
+                'zend_extension',
+            ],
+            'opcache'=>[
+                'opcache.enable',
+            ],
+        ],[
+            'PHP'=>[
+                'extension_dir',
+                'extension',
+                'zend_extension',
+            ],
+            'opcache'=>[
+                'opcache.enable',
+            ],
+        ], null, true);
+        $changes=ob_get_clean();
+        echo '<pre>'.$changes.'</pre>';
         ?>
         <h4><?=toHTML($file)?></h4>
         <div>
-            <div class="pre"><?=toHTML(file_get_contents($file))?></div>
+            <div class="pre"><?=toHTML(stream_get_contents($res))?></div>
         </div>
         <?php
     }
@@ -82,10 +105,11 @@ class index{
 
     static function GET_appini(){
         $file=INI_FILE;
+        $res=fopen($file, 'r');
         ?>
         <h4><?=toHTML($file)?></h4>
         <div class="">
-            <div class="pre"><?=toHTML(file_get_contents($file))?></div>
+            <div class="pre"><?=toHTML(stream_get_contents($res))?></div>
         </div>
         <?php
     }
