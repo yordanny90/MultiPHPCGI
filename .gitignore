@@ -4,3 +4,4 @@
 /tmp/
 /bin/php/
 /bin/nginx/
+/app/app.lock
