@@ -34,7 +34,7 @@ if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo configurar el php.ini.
 	exit /b %ERRORLEVEL%
 )
-powershell -Command "(Get-Content '%php_ini%') -replace '^;((opcache.enable)=(0|1)\b', '$2=1' | Set-Content '%php_ini%'"
+powershell -Command "(Get-Content '%php_ini%') -replace '^;((opcache.enable)=(0|1))\b', '$2=1' | Set-Content '%php_ini%'"
 if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo configurar el php.ini.
 	exit /b %ERRORLEVEL%
