@@ -1,0 +1,7 @@
+/.idea/
+/.vscode/
+/.history/
+/tmp/
+/bin/php/
+/bin/nginx/
+/app/app.lock
