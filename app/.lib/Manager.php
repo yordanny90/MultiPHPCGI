@@ -304,7 +304,7 @@ class Manager{
 
     static function nginx_bin($dir=null){
         if($dir===null) $dir=self::getConfig()['nginx']['Dir']??null;
-        $bin=ROOT_DIR.'\\bin\\nginx\\'.$dir.'\\nginx.exe';
+        $bin=ROOT_DIR.'\\nginx\\'.$dir.'\\nginx.exe';
         if(!is_file($bin)) return null;
         return $bin;
     }
@@ -317,27 +317,27 @@ class Manager{
 
     static function php_bin($dir=null){
         if($dir===null) $dir=self::getConfig()['php']['Dir']??null;
-        $bin=ROOT_DIR.'\\bin\\php\\'.$dir.'\\php.exe';
+        $bin=ROOT_DIR.'\\php\\'.$dir.'\\php.exe';
         if(!is_file($bin)) return null;
         return $bin;
     }
 
     static function phpcgi_bin($dir=null){
         if($dir===null) $dir=self::getConfig()['php']['Dir']??null;
-        $bin=ROOT_DIR.'\\bin\\php\\'.$dir.'\\php-cgi.exe';
+        $bin=ROOT_DIR.'\\php\\'.$dir.'\\php-cgi.exe';
         if(!is_file($bin)) return null;
         return $bin;
     }
 
     static function php_ini($dir=null){
         if($dir===null) $dir=self::getConfig()['php']['Dir']??null;
-        $bin=ROOT_DIR.'\\bin\\php\\'.$dir.'\\php.ini';
+        $bin=ROOT_DIR.'\\php\\'.$dir.'\\php.ini';
         if(!is_file($bin)) return null;
         return $bin;
     }
 
     static function php_bin_list(){
-        $bindirphp=ROOT_DIR.'\\bin\\php';
+        $bindirphp=ROOT_DIR.'\\php';
         $list=array_filter(array_map(function($name) use ($bindirphp){
             $php_cmd=$bindirphp.'\\'.$name.'\\php.exe';
             if(is_file($php_cmd)){
@@ -374,7 +374,7 @@ class Manager{
     }
 
     static function getServer(){
-        $port=file_get_contents(BASEDIR.'/port.txt');
+        $port=file_get_contents(ROOT_DIR.'/inc/port.txt');
         if(!is_numeric($port)) return null;
         return 'localhost:'.$port;
     }

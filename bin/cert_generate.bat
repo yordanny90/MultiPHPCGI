@@ -6,7 +6,7 @@ if %ERRORLEVEL% neq 0 (
 	exit /b
 )
 echo Generando nuevo certificado...
-call "%~dp0..\bin\utils.bat"
+call "%~dp0utils.bat"
 set name=localhost
 set dir=%~dp0..\
 set _tmp=%dir%tmp\openssl\

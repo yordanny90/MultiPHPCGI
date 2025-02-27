@@ -1,8 +1,8 @@
 @echo off
 setlocal
-call "%~dp0..\bin\utils.bat"
+call "%~dp0utils.bat"
 set "php_ver=%1"
-set "php_dir=%~dp0..\bin\php\%php_ver%"
+set "php_dir=%~dp0..\php\%php_ver%"
 set "php_exe=%php_dir%\php.exe"
 set "_tmp=%~dp0..\tmp"
 if "%php_ver%"=="" (

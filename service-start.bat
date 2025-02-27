@@ -1,2 +1,2 @@
 @echo off
-call "%~dp0app\app.bat" service-start
+call "%~dp0bin\app.bat" service-start

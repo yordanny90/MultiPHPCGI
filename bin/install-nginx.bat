@@ -1,8 +1,8 @@
 @echo off
 setlocal
-call "%~dp0..\bin\utils.bat"
+call "%~dp0utils.bat"
 set "nginx_ver=%1"
-set "nginx_dir=%~dp0..\bin\nginx\%nginx_ver%"
+set "nginx_dir=%~dp0..\nginx\%nginx_ver%"
 set "nginx_exe=%nginx_dir%\nginx.exe"
 set "_tmp=%~dp0..\tmp"
 set "nginx_conf=%~dp0..\conf\nginx"

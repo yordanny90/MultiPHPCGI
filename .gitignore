@@ -2,7 +2,7 @@
 /.vscode/
 /.history/
 /tmp/
-/bin/php/
-/bin/nginx/
+/php/
+/nginx/
 /app/app.lock
 /conf/
