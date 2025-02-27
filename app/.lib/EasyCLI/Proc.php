@@ -42,8 +42,7 @@ class Proc{
         if(($descriptor_spec[1][0]??null=='file')) $outfile=$descriptor_spec[1][1];
         if(($descriptor_spec[2][0]??null=='file')) $errfile=$descriptor_spec[2][1];
         $proc=proc_open($command, $descriptor_spec, $pipes, $cwd, $env_vars, $options);
-        if(!$proc)
-            return null;
+        if(!$proc) return null;
         $new=new static($proc, $outfile, $errfile);
         if(!empty($pipes[0])) $new->in=&$pipes[0];
         if(!empty($pipes[1])) $new->out=&$pipes[1];
