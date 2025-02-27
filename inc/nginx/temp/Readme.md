@@ -1,1 +1,0 @@
-## NGINX guarda sus archivos temporales en esta carpeta

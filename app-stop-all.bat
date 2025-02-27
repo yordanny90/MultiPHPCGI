@@ -1,2 +1,2 @@
 @echo off
-call "%~dp0app.bat" stop-all
+call "%~dp0app\app.bat" stop-all

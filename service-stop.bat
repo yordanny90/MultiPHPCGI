@@ -1,2 +1,2 @@
 @echo off
-call "%~dp0app.bat" service-stop
+call "%~dp0app\app.bat" service-stop

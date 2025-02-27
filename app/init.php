@@ -6,7 +6,7 @@ chdir(BASEDIR);
 define('ROOT_DIR', dirname(BASEDIR));
 define('CONFIG_DIR', ROOT_DIR.'\conf');
 define('INC_DIR', ROOT_DIR.'\inc');
-define('INI_FILE', CONFIG_DIR.'\app.ini');
+define('INI_FILE', INC_DIR.'\app.ini');
 define('APP_VER', '1.2');
 
 require_once BASEDIR.'\.lib\__autoload.php';

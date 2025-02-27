@@ -277,7 +277,7 @@ class Manager{
             $eq['ProcessId']=$pid;
         }
         return EasyCLI::windows_process_list($eq, null, [
-            'ExecutablePath'=>ROOT_DIR
+            'ExecutablePath'=>ROOT_DIR.'\\'
         ]);
     }
 
@@ -287,7 +287,7 @@ class Manager{
             $eq['Name']=$name;
         }
         return EasyCLI::windows_process_list($eq, null, null, [
-            'ExecutablePath'=>ROOT_DIR
+            'ExecutablePath'=>ROOT_DIR.'\\'
         ]);
     }
 
@@ -373,6 +373,67 @@ class Manager{
         return true;
     }
 
+    static function getServer(){
+        $port=file_get_contents(BASEDIR.'/port.txt');
+        if(!is_numeric($port)) return null;
+        return 'localhost:'.$port;
+    }
+
+    static function app_start(){
+        $server=self::getServer();
+        if(!$server) return false;
+        # Bloqueo del proceso
+        $lockfile=Manager::lock_file();
+        $lock=fopen($lockfile, 'a');
+        if(!$lock) return false;
+        if(!flock($lock, LOCK_EX|LOCK_NB)){
+            return false;
+        }
+        echo "Iniciando ".$server."\n";
+        $service=EasyCLI::newCleanEnv([PHP_BINARY, '-S', $server, '-t', BASEDIR], ROOT_DIR)->open();
+        if(!$service){
+            return false;
+        }
+        $pid=$service->pid().','.getmypid();
+        echo "Servicio iniciado ".$pid."\n";
+        $service->in_close();
+        fseek($lock, 0);
+        ftruncate($lock, 0);
+        fwrite($lock, $pid);
+        $inodo=fstat($lock)['ino'];
+        register_shutdown_function(function()use($service, $lock, $lockfile, $pid){
+            $service->terminate();
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            ob_start();
+            readfile($lockfile);
+            $content=ob_get_clean();
+            if($content===$pid){
+                unlink($lockfile);
+            }
+        });
+        $sleep=5;
+        while(1){
+            sleep($sleep);
+            if(!$service->is_running()){
+                break;
+            }
+            clearstatcache(true, $lockfile);
+            $ino=@fileinode($lockfile);
+            if(!$ino || $ino!=$inodo){
+                $lock=null;
+                if(($lock=fopen($lockfile, 'a')) && flock($lock, LOCK_EX|LOCK_NB) && ftruncate($lock, 0) && fwrite($lock, $pid)){
+                    $inodo=fstat($lock)['ino'];
+                    continue;
+                }
+                break;
+            }
+        }
+        $service->err_passthru();
+        $service->out_passthru();
+        return true;
+    }
+
     static function app_stop(){
         $pid=self::lock_pid();
         if(count($pid)==0) return true;
@@ -380,6 +441,13 @@ class Manager{
         if(count($list)!=count($pid)) return true;
         if(!self::taskkill(...$pid)) return false;
         return true;
+    }
+
+    static function app_open(){
+        $server=self::getServer();
+        if(!$server) return false;
+        $cli=EasyCLI::newCleanEnv('start "" "http://'.$server.'"');
+        return boolval($cli->open());
     }
 
     static function php_stop(){
@@ -394,12 +462,6 @@ class Manager{
     }
 
     static function service_start(){
-        //TODO Intenta generar un php.ini si no existe
-        //TODO Se deben modificar los valores de:
-        // [PHP] extension_dir="ext"
-        // [opcache] opcache.enable=1
-        // [mail function] sendmail_path=
-        // TODO Habilitar las extensiones de la lista del app.ini
         if(!self::service_stop()) return false;
         $phpcgi=self::phpcgi_bin();
         if(!$phpcgi) return false;
@@ -419,17 +481,21 @@ class Manager{
             ];
             $cli->set_cmd($cmd);
             $procPhp=$cli->open();
-            if(!$procPhp) return false;
+            if(!$procPhp){
+                return false;
+            }
         }
         $cmd=[
             $hidec,
             $nginx,
             '-p',
-            INC_DIR.'\\nginx',
+            CONFIG_DIR.'\\nginx',
         ];
         $cli->set_cmd($cmd);
         $procNginx=$cli->open();
-        if(!$procNginx) return false;
+        if(!$procNginx){
+            return false;
+        }
         return true;
     }
 
@@ -440,7 +506,7 @@ class Manager{
             $nginx,
             '-t',
             '-p',
-            INC_DIR.'\\nginx',
+            CONFIG_DIR.'\\nginx',
         ];
         $procNginx=EasyCLI::newCleanEnv($cmd, ROOT_DIR)->open();
         if(!$procNginx) return false;

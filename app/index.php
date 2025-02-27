@@ -220,10 +220,4 @@ class index{
         }
     }
 }
-
-if(php_sapi_name()=='cli'){
-    Manager::service_start();
-    exit;
-}
-
 index::main();

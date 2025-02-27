@@ -1,10 +1,9 @@
 @echo off
 setlocal
-call "%~dp0utils.bat"
+call "%~dp0..\bin\utils.bat"
 set "php_ver=%1"
-set "php_dir=%~dp0php\%php_ver%"
+set "php_dir=%~dp0..\bin\php\%php_ver%"
 set "php_exe=%php_dir%\php.exe"
-set "tmp=%~dp0..\tmp\"
 if "%php_ver%"=="" (
 	echo Debe indicar una version de PHP para configurar.
 	exit /b 1
@@ -30,11 +29,6 @@ if %ERRORLEVEL% neq 0 (
 	exit /b %ERRORLEVEL%
 )
 powershell -Command "(Get-Content '%php_ini%') -replace '^;(zend_extension=(opcache))\b', '$1' | Set-Content '%php_ini%'"
-if %ERRORLEVEL% neq 0 (
-	echo Error: No se pudo configurar el php.ini.
-	exit /b %ERRORLEVEL%
-)
-powershell -Command "(Get-Content '%php_ini%') -replace '^;((opcache.enable)=(0|1))\b', '$2=1' | Set-Content '%php_ini%'"
 if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo configurar el php.ini.
 	exit /b %ERRORLEVEL%
