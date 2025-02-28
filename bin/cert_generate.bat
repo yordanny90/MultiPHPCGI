@@ -1,10 +1,5 @@
 @echo off
 setlocal
-net session >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-	powershell -Command "Start-Process cmd -ArgumentList '/c \"%~fs0\" %*' -Verb RunAs"
-	exit /b
-)
 echo Generando nuevo certificado...
 call "%~dp0utils.bat"
 set name=localhost
@@ -61,8 +56,13 @@ copy /Y "%_tmp%openssl.conf" "%certdir%%name%.conf"
 del "%_tmp%openssl.conf"
 del "%_tmp%request.csr"
 echo Registrando certificado...
-@REM certutil -addstore -f "Root" "%certdir%%name%.crt"
+net session >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-	pause
+	powershell -Command "Start-Process certutil -ArgumentList '-addstore -f \"Root\" \"%certdir%%name%.crt\"' -Verb RunAs"
+) else (
+	certutil -addstore -f "Root" "%certdir%%name%.crt"
 )
-start "" "%certdir%%name%.crt"
+if %ERRORLEVEL% neq 0 (
+	start "" "%certdir%%name%.crt"
+	exit /b %ERRORLEVEL%
+)

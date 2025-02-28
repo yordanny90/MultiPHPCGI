@@ -1,1 +1,1 @@
-set PATH=%~dp0openssl;%~dp0curl;%~dp0hidec;%~dp07za;%PATH%
+set PATH=%~dp0nircmd;%~dp0openssl;%~dp0curl;%~dp0hidec;%~dp07za;%PATH%

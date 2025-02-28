@@ -18,15 +18,13 @@ if not exist "%~dp0..\php\%php_ver%\php.ini" (
 	)
 )
 set /p nginx_ver=<"%~dp0..\inc\nginxdir.txt"
-set "nginx_exe=%~dp0..\nginx\%nginx_ver%\nginx.exe"
-if not exist "%nginx_exe%" (
+if not exist "%~dp0..\nginx\%nginx_ver%\nginx.exe" (
 	call "%~dp0install-nginx.bat" %nginx_ver%
 	if %ERRORLEVEL% neq 0 (
 		exit /b %ERRORLEVEL%
 	)
 )
 set nginx_ver=
-set nginx_exe=
 if not exist "%~dp0..\conf\ssl\localhost.crt" (
 	call "%~dp0cert_generate.bat"
 	if %ERRORLEVEL% neq 0 (

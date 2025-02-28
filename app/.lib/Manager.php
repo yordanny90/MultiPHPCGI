@@ -291,13 +291,12 @@ class Manager{
         ]);
     }
 
-    static function cert_generate($name='localhost'){
+    static function cert_generate(){
         $proc=EasyCLI::newCleanEnv([
             'cmd',
             '/C',
             'call',
-            BASEDIR.'\cert_generate.bat',
-            escapeshellarg($name)
+            BASEDIR.'\bin\cert_generate.bat'
         ])->open();
         $proc->close();
     }
