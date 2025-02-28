@@ -42,7 +42,6 @@ public class TrayIcon
         this.notifyIcon.ContextMenuStrip = this.contextMenu;
     }
 
-    // Método para agregar un ítem al menú contextual
     private void AddMenuCmd(string text, string command, string args)
     {
         if (command != null)
@@ -72,7 +71,6 @@ public class TrayIcon
         }
     }
 
-    // Método para ejecutar un archivo .bat
     private void ExecuteCmd(string command, string args)
     {
         ProcessStartInfo startInfo = new ProcessStartInfo
