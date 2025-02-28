@@ -1,2 +1,2 @@
 @echo off
-%~dp0nginx.exe -s reload
+"%~dp0nginx.exe" -s reload

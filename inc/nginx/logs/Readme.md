@@ -1,1 +1,0 @@
-## NGINX guarda sus archivos de log en esta carpeta

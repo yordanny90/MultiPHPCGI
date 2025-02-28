@@ -1,3 +1,3 @@
 @echo off
-call "%~dp0app.bat"
-call "%~dp0app.bat" app-open
+call "%~dp0bin\app.bat" app-start
+call "%~dp0bin\app.bat" app-open

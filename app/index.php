@@ -2,7 +2,6 @@
 require __DIR__.'/init.php';
 ini_set('default_charset', 'utf-8');
 set_time_limit(20);
-$bindirphp=ROOT_DIR.'/bin/php';
 class index{
     private static function tpl($buffer){
         ?>
@@ -220,10 +219,4 @@ class index{
         }
     }
 }
-
-if(php_sapi_name()=='cli'){
-    Manager::service_start();
-    exit;
-}
-
 index::main();
