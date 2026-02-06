@@ -1,6 +1,6 @@
 @echo off
 setlocal
-call "%~dp0utils.bat"
+call "%~dp0mphpcgi-load.bat"
 set "nginx_ver=%1"
 set "nginx_dir=%~dp0..\nginx\%nginx_ver%"
 set "nginx_exe=%nginx_dir%\nginx.exe"
@@ -15,7 +15,7 @@ if "%nginx_ver%"=="" (
 echo Instalacion de NGINX version %nginx_ver%
 if exist "%nginx_exe%" (
 	echo La instalacion ya existe.
-	exit /b 0
+	goto copy_conf
 )
 
 set "url=https://nginx.org/download/"
@@ -25,7 +25,7 @@ if "%nginxbase%"=="1." (
 	set "name=nginx-%nginx_ver%"
 	set "zipfile=%name%.zip"
 	echo %url%%name%
-	for /f %%a in ('curl.exe -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
+	for /f %%a in ('curl -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
 	set "name="
 ) else (
 	echo Error: Version de NGINX invalida.
@@ -39,7 +39,7 @@ if "%name%"=="" (
 
 rmdir /s /q "%_tmp%\%name%\"
 @mkdir "%_tmp%\%name%\"
-curl.exe -s -o "%_tmp%\%name%\%zipfile%" "%url%%zipfile%"
+curl -s -o "%_tmp%\%name%\%zipfile%" "%url%%zipfile%"
 if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo descargar el archivo.
 	exit /b %ERRORLEVEL%
@@ -51,7 +51,7 @@ if not exist "%_tmp%\%name%\%zipfile%" (
 )
 
 echo Descomprimiendo ZIP...
-7za.exe x "%_tmp%\%name%\%zipfile%" "-o%_tmp%\%name%\"
+call 7za x "%_tmp%\%name%\%zipfile%" "-o%_tmp%\%name%\"
 if %ERRORLEVEL% neq 0 (
 	rmdir /s /q "%_tmp%\%name%"
 	echo Error: No se pudo descomprimir el archivo.
@@ -77,6 +77,7 @@ if %ERRORLEVEL% neq 0 (
 echo Eliminando archivos temporales...
 rmdir /s /q "%_tmp%\%name%"
 
+:copy_conf
 xcopy "%nginx_dir%\conf" "%nginx_conf%\conf" /e /h /i /y /j
 if %ERRORLEVEL% neq 0 (
 	rmdir /s /q "%_tmp%\%name%"
@@ -106,3 +107,5 @@ if not exist "%nginx_dir%\nginx.exe" (
 	echo Error: No se pudo completar la instalacion.
 	exit /b 1
 )
+
+call init-servers

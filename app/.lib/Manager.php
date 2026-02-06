@@ -2,46 +2,35 @@
 
 class Manager{
 
-    static function lock_file(){
-        return BASEDIR.'\\app.lock';
+    static function getNginxDir(){
+        return file_get_contents(INC_DIR.'/nginxdir.txt');
     }
 
-    static function lock_pid(){
-        ob_start();
-        readfile(self::lock_file());
-        return array_filter(explode(",", ob_get_clean()), 'is_numeric');
+    static function getPhpDir(){
+        return file_get_contents(INC_DIR.'/phpdir.txt');
     }
 
     /**
      * @return array
      * Array datos:
-     * - php
-     *   - Dir
-     *   - PortList
-     * - nginx
-     *   - Dir
+     * - server.*
      *   - Port
      *   - SSLPort
-     *   - SSLEnabled
+     *   - CGIPort
+     *   - CGIMaxProc
+     *   - PHP
+     *   - Root
      */
     static function getConfig(): array{
         $config=@parse_ini_file(INI_FILE, true, INI_SCANNER_TYPED)?:[];
+        $servers=array_filter($config, function($val, $key){
+            return is_array($val) && preg_match('/^server[\-\.]\w+/', $key);
+        }, ARRAY_FILTER_USE_BOTH);
         $keys=array_fill_keys([
-            'php',
-            'nginx'
         ], []);
         $config=array_filter($config, 'is_array');
         $config=array_merge($keys, array_intersect_key($config, $keys));
-        $config['php']=array_merge([
-            'Dir'=>null,
-            'PortList'=>null,
-        ], $config['php'] ?? []);
-        $config['nginx']=array_merge([
-            'Dir'=>null,
-            'Port'=>null,
-            'SSLPort'=>null,
-            'SSLEnabled'=>null,
-        ], $config['nginx'] ?? []);
+        $config['server']=$servers;
         return $config;
     }
 
@@ -108,8 +97,14 @@ class Manager{
         $uncom=self::preg_list($uncomment);
         $keySets=array_keys($sets);
         $update=array_filter($update, 'is_array');
-        $comment=array_map([self::class, 'preg_list'], array_filter($comment, 'is_array'));
-        $uncomment=array_map([self::class, 'preg_list'], array_filter($uncomment, 'is_array'));
+        $comment=array_map([
+            self::class,
+            'preg_list'
+        ], array_filter($comment, 'is_array'));
+        $uncomment=array_map([
+            self::class,
+            'preg_list'
+        ], array_filter($uncomment, 'is_array'));
         $saved=0;
         $posA=0;
         $group=$groupV='';
@@ -121,7 +116,10 @@ class Manager{
             if(preg_match('/^\s*\;/', $line)){
                 $posA=$pos;
                 if($uncom && preg_match('/^\;('.$uncom.')\s*(.|$)/', $line, $match)){
-                    if(($match[2]=='=' && strstr($match[1], '=')===false) || (in_array($match[2], ['', ';']) && strstr($match[1], '=')!==false)){
+                    if(($match[2]=='=' && strstr($match[1], '=')===false) || (in_array($match[2], [
+                                '',
+                                ';'
+                            ]) && strstr($match[1], '=')!==false)){
                         $posB=ftell($orig);
                         $length=$posA-$saved;
                         if($length>0){
@@ -157,8 +155,8 @@ class Manager{
                 }
                 unset($out);
                 $groupV='['.$group.']'.PHP_EOL;
-                $com=$comment[$group]??null;
-                $uncom=$uncomment[$group]??null;
+                $com=$comment[$group] ?? null;
+                $uncom=$uncomment[$group] ?? null;
                 if(isset($update[$group])){
                     $sets=$update[$group];
                     $keySets=array_keys($sets);
@@ -178,7 +176,10 @@ class Manager{
                 continue;
             }
             if($com && preg_match('/^('.$com.')\s*(.|$)/', $line, $match)){
-                if(($match[2]=='=' && strstr($match[1], '=')===false) || (in_array($match[2], ['', ';']) && strstr($match[1], '=')!==false)){
+                if(($match[2]=='=' && strstr($match[1], '=')===false) || (in_array($match[2], [
+                            '',
+                            ';'
+                        ]) && strstr($match[1], '=')!==false)){
                     $posA=$pos;
                     $posB=ftell($orig);
                     $length=$posA-$saved;
@@ -291,57 +292,60 @@ class Manager{
         ]);
     }
 
-    static function cert_generate(){
-        $proc=EasyCLI::newCleanEnv([
-            'cmd',
-            '/C',
-            'call',
-            BASEDIR.'\bin\cert_generate.bat'
-        ])->open();
-        $proc->close();
-    }
-
     static function nginx_bin($dir=null){
-        if($dir===null) $dir=self::getConfig()['nginx']['Dir']??null;
+        if($dir===null) $dir=self::getNginxDir();
         $bin=ROOT_DIR.'\\nginx\\'.$dir.'\\nginx.exe';
-        if(!is_file($bin)) return null;
+        if(!is_file($bin) || !is_dir(SITES_DIR)){
+            self::install_nginx($dir);
+            if(!is_file($bin)) return null;
+        }
         return $bin;
     }
 
-    static function hidec_bin(){
-        $bin=ROOT_DIR.'\\bin\\hidec\\hidec.exe';
-        if(!is_file($bin)) return null;
-        return $bin;
+    static function install_php($dir){
+        passthru('install-php '.$dir);
+    }
+
+    static function install_nginx($dir){
+        passthru('install-nginx '.$dir);
     }
 
     static function php_bin($dir=null){
-        if($dir===null) $dir=self::getConfig()['php']['Dir']??null;
+        if($dir===null) $dir=self::getPhpDir() ?? null;
         $bin=ROOT_DIR.'\\php\\'.$dir.'\\php.exe';
-        if(!is_file($bin)) return null;
+        if(!is_file($bin)){
+            self::install_php($dir);
+            if(!is_file($bin)) return null;
+        }
         return $bin;
     }
 
     static function phpcgi_bin($dir=null){
-        if($dir===null) $dir=self::getConfig()['php']['Dir']??null;
+        if($dir===null) $dir=self::getPhpDir() ?? null;
         $bin=ROOT_DIR.'\\php\\'.$dir.'\\php-cgi.exe';
-        if(!is_file($bin)) return null;
+        if(!is_file($bin)){
+            self::install_php($dir);
+            if(!is_file($bin)) return null;
+        }
         return $bin;
     }
 
     static function php_ini($dir=null){
-        if($dir===null) $dir=self::getConfig()['php']['Dir']??null;
+        if($dir===null) $dir=self::getPhpDir() ?? null;
         $bin=ROOT_DIR.'\\php\\'.$dir.'\\php.ini';
-        if(!is_file($bin)) return null;
+        if(!is_file($bin)){
+            self::install_php($dir);
+            if(!is_file($bin)) return null;
+        }
         return $bin;
     }
 
-    static function php_bin_list(){
+    static function php_list(){
         $bindirphp=ROOT_DIR.'\\php';
         $list=array_filter(array_map(function($name) use ($bindirphp){
             $php_cmd=$bindirphp.'\\'.$name.'\\php.exe';
             if(is_file($php_cmd)){
                 $php_cmd=realpath($php_cmd);
-                PHPDetect::addCustom($php_cmd);
                 return $name;
             }
             return null;
@@ -365,118 +369,232 @@ class Manager{
     }
 
     static function service_stop(){
-        $list=self::getProcessMyDir(['php-cgi.exe', 'nginx.exe']);
+        $list=self::getProcessMyDir([
+            'php-cgi.exe',
+            'php-cgi-spawner.exe',
+            'nginx.exe'
+        ]);
         if(count($list)==0) return true;
         $list=array_column($list, 'ProcessId');
         if(!self::taskkill(...$list)) return false;
         return true;
     }
 
-    static function getServer(){
-        $port=file_get_contents(ROOT_DIR.'/inc/port.txt');
-        if(!is_numeric($port)) return null;
-        return 'localhost:'.$port;
-    }
-
-    static function app_start(){
-        $server=self::getServer();
-        if(!$server) return false;
-        # Bloqueo del proceso
-        $lockfile=Manager::lock_file();
-        $lock=fopen($lockfile, 'a');
-        if(!$lock) return false;
-        if(!flock($lock, LOCK_EX|LOCK_NB)){
-            return false;
-        }
-        echo "Iniciando ".$server."\n";
-        $service=EasyCLI::newCleanEnv([PHP_BINARY, '-S', $server, '-t', BASEDIR], ROOT_DIR)->open();
-        if(!$service){
-            return false;
-        }
-        $pid=$service->pid().','.getmypid();
-        echo "Servicio iniciado ".$pid."\n";
-        $service->in_close();
-        fseek($lock, 0);
-        ftruncate($lock, 0);
-        fwrite($lock, $pid);
-        $inodo=fstat($lock)['ino'];
-        register_shutdown_function(function()use($service, $lock, $lockfile, $pid){
-            $service->terminate();
-            flock($lock, LOCK_UN);
-            fclose($lock);
-            ob_start();
-            readfile($lockfile);
-            $content=ob_get_clean();
-            if($content===$pid){
-                unlink($lockfile);
-            }
-        });
-        $sleep=5;
-        while(1){
-            sleep($sleep);
-            if(!$service->is_running()){
-                break;
-            }
-            clearstatcache(true, $lockfile);
-            $ino=@fileinode($lockfile);
-            if(!$ino || $ino!=$inodo){
-                $lock=null;
-                if(($lock=fopen($lockfile, 'a')) && flock($lock, LOCK_EX|LOCK_NB) && ftruncate($lock, 0) && fwrite($lock, $pid)){
-                    $inodo=fstat($lock)['ino'];
-                    continue;
-                }
-                break;
-            }
-        }
-        $service->err_passthru();
-        $service->out_passthru();
-        return true;
-    }
-
-    static function app_stop(){
-        $pid=self::lock_pid();
-        if(count($pid)==0) return true;
-        $list=self::getProcessMyDir(['php.exe','php-win.exe'], $pid);
-        if(count($list)!=count($pid)) return true;
-        if(!self::taskkill(...$pid)) return false;
-        return true;
-    }
-
-    static function app_open(){
-        $server=self::getServer();
-        if(!$server) return false;
-        $cli=EasyCLI::newCleanEnv('start "" "http://'.$server.'"');
-        return boolval($cli->open());
-    }
-
     static function php_stop(){
-        $list=self::getProcessMyDir(['php.exe','php-win.exe']);
+        $list=self::getProcessMyDir([
+            'php.exe',
+            'php-win.exe'
+        ]);
         if(count($list)==0) return true;
         $mypid=getmypid();
-        $list=array_column(array_filter($list, function($row)use($mypid){
+        $list=array_column(array_filter($list, function($row) use ($mypid){
             return $row['ProcessId']!=$mypid && (strstr($row['CommandLine'], BASEDIR)!==false);
         }), 'ProcessId');
         if(!self::taskkill(...$list)) return false;
         return true;
     }
 
+    static function addServer_conf(string $name, array $server){
+        $data="\n[".$name."]\n";
+        foreach($server As $n=>$v){
+            if($n=='Root') $data.="; Raíz del servidor\n";
+            if($n=='CGIMaxProc') $data.="; Procesos máximos de PHP-CGI\n";
+            if($n=='Port') $data.="; URL http://localhost:$v/\n";
+            if($n=='SSLPort') $data.="; URL https://localhost:$v/\n";
+            $data.="$n=$v\n";
+        }
+        return file_put_contents(INI_FILE, $data, FILE_APPEND);
+    }
+
+    static function addServer(?string $_dir=null, ?string $_php=null){
+        $config=self::getConfig();
+        $maxPort=80;
+        $maxSSLPort=8000;
+        $maxCGIPort=9020;
+        foreach($config['server'] AS $server){
+            if(is_numeric($server['Port'])){
+                $maxPort=max($maxPort, intval($server['Port']));
+            }
+            ++$maxPort;
+            if(is_numeric($server['SSLPort'])){
+                $maxSSLPort=max($maxSSLPort, intval($server['SSLPort']));
+            }
+            ++$maxSSLPort;
+            if(is_numeric($server['CGIPort'])){
+                $maxCGIPort=max($maxCGIPort, intval($server['CGIPort']));
+            }
+            ++$maxCGIPort;
+        }
+        $server=[
+            'SSLPort'=>$maxSSLPort,
+            'Port'=>$maxPort,
+            'Root'=>$_dir ?? null,
+            'PHP'=>$_php ?? self::getPhpDir(),
+            'CGIPort'=>$maxCGIPort,
+            'CGIMaxProc'=>8,
+        ];
+        do{
+            echo "Ingresa la dirección de Root: ".(is_null($server['Root'])?'':"[{$server['Root']}]")."\n";
+            $line = readline();
+            if($line===''){
+                if(is_null($server['Root'])) exit(1);
+                $line=$server['Root'];
+            }
+            if(is_dir($line)){
+                break;
+            }
+            else{
+                echo "Debe ser una carpeta existente\n\n";
+                continue;
+            }
+        }while(true);
+        $server['Root']=realpath($line);
+        if(substr($server['Root'], 0, 2)===substr(BASEDIR, 0, 2)){
+            $server['Root']=substr($server['Root'], 2);
+        }
+        $server['Root']=str_replace('\\', '/', $server['Root']);
+
+        do{
+            echo "PHP versión ".$server['PHP']."\n";
+            echo "Desea cambiar la versión de PHP? (Y/N): [N]\n";
+            $line=strtoupper(trim(readline()));
+        }while(!in_array($line, ['', 'Y', 'N']));
+        if($line=='Y'){
+            shell_exec('download_php_nts_list');
+            exec('php-list-online', $list);
+            $line='';
+            do{
+                echo implode("\n", array_filter($list, function($v)use($line){
+                    return strpos($v, $line)===0;
+                }));
+                echo "\n";
+                echo "Versión de PHP: ";
+                $line=trim(readline());
+            }while(!in_array($line, $list));
+            $server['PHP']=$line;
+        }
+
+        $name='server.'.($server['SSLPort']);
+        $suf='';
+        $i=0;
+        while(isset($config['server'][$name.$suf])){
+            $suf='('.(++$i).')';
+        }
+        $name.=$suf;
+        print_r($server);
+        do{
+            echo "Desea guardar el nuevo servidor como [".$name."]? (Y/N): [Y]\n";
+            $line=strtoupper(trim(readline()));
+        }while(!in_array($line, ['', 'Y', 'N']));
+        if($line=='N') return;
+        self::addServer_conf($name, $server);
+
+        do{
+            echo "Desea generar el conf del nuevo servidor ahora? (Y/N): [Y]\n";
+            $line=strtoupper(trim(readline()));
+        }while(!in_array($line, ['', 'Y', 'N']));
+        if($line!='N'){
+            passthru('init-servers');
+            passthru('mphpcgi nginx-test');
+            echo "...";
+            readline();
+        }
+    }
+
+    static function process_list($n=null){
+        $names=[
+            '*',
+            'nginx.exe',
+            'php-cgi-spawner.exe',
+            'php-cgi.exe',
+            'php.exe',
+            'MultiPHPCGI.exe',
+        ];
+        $array2ini=function($name, $data)use(&$array2ini){
+            if(is_object($data) || is_array($data)){
+                echo "\n[$name]\n";
+                foreach($data as $n=>$v){
+                    $array2ini($n, $v);
+                }
+                return;
+            }
+            echo "  $name=$data\n";
+        };
+        if(is_numeric($n)) $n=$names[$n]??'';
+        if($n=='*'){
+            foreach(Manager::getProcessMyDir(null) as $p){
+                $array2ini($p['Name'], $p);
+            }
+        }
+        elseif(is_string($n) && $n!==''){
+            foreach(Manager::getProcessMyDir($n) as $p){
+                $array2ini($p['Name'], $p);
+            }
+        }
+        else{
+            echo "Opciones:\n";
+            foreach($names as $k=>$name){
+                echo "\t[".$k."] ".$name."\n";
+            }
+        }
+    }
+
+    static function initServers(?string $n=null){
+        $config=self::getConfig();
+        foreach($config['server'] AS $name=>$server){
+            if($n!==null && $name!==$n) continue;
+            self::initServer($name, $server);
+        }
+    }
+
+    private static function initServer(string $name, array $server, bool $replace=false){
+        $dest=SITES_DIR.'/'.$name.'.conf';
+        if(file_exists($dest) && !$replace) return false;
+        $tpl=file_get_contents(INC_DIR.'/newserver.conf');
+        if(!$tpl) throw new Exception('newserver.conf not found');
+        $replace=[
+            '{{Root}}'=>$server['Root']??null,
+            '{{CGIPort}}'=>$server['CGIPort']??null,
+        ];
+        if(isset($server['Port'])){
+            $replace['{{Port}}']=$server['Port'];
+        }
+        else{
+            $replace['listen {{Port}} ']='# listen {{Port}} ';
+        }
+        if(isset($server['SSLPort'])){
+            $replace['{{SSLPort}}']=$server['SSLPort'];
+        }
+        else{
+            $replace['http2 on;']='# http2 on;';
+            $replace['listen {{SSLPort}} ']='# listen {{SSLPort}} ';
+        }
+        $c=count($replace);
+        $replace=array_filter($replace);
+        if(count($replace)!=$c) throw new Exception('Server "'.$name.'" invalid');
+        $new=str_replace(array_keys($replace), array_values($replace), $tpl);
+        return file_put_contents($dest, $new);
+    }
+
     static function service_start(){
         if(!self::service_stop()) return false;
-        $phpcgi=self::phpcgi_bin();
-        if(!$phpcgi) return false;
         $nginx=self::nginx_bin();
         if(!$nginx) return false;
         $cli=EasyCLI::newCleanEnv('', ROOT_DIR);
         $config=self::getConfig();
-        $portList=array_filter(explode(',', $config['php']['PortList']??''), 'is_numeric');
-        if(count($portList)==0) return false;
-        $hidec=self::hidec_bin();
-        foreach($portList as $port){
+        foreach($config['server'] as $server){
+            $cgiport=$server['CGIPort'] ?? null;
+            if(!is_numeric($cgiport)) return false;
+            $phpserver=self::phpcgi_bin($server['PHP'] ?? null);
+            if(!$phpserver) return false;
+            $maxProc=$server['CGIMaxProc'] ?? 8;
+            if(!is_numeric($maxProc)) return false;
             $cmd=[
-                $hidec,
-                $phpcgi,
-                '-b',
-                '127.0.0.1:'.$port,
+                'hidec',
+                'php-cgi-spawner',
+                $phpserver.' -d opcache.cache_id=mphpcgi_'.$cgiport,
+                $cgiport,
+                '0+'.$maxProc,
             ];
             $cli->set_cmd($cmd);
             $procPhp=$cli->open();
@@ -485,7 +603,7 @@ class Manager{
             }
         }
         $cmd=[
-            $hidec,
+            'hidec',
             $nginx,
             '-p',
             CONFIG_DIR.'\\nginx',
@@ -513,6 +631,11 @@ class Manager{
         $procNginx->out_passthru();
         $procNginx->err_passthru();
         return true;
+    }
+
+    static function nginx_log_clear(){
+        if(!unlink($file=NGINX_LOG_DIR.'/access.log')) echo "Fail: $file\n";
+        if(!unlink($file=NGINX_LOG_DIR.'/error.log')) echo "Fail: $file\n";
     }
 
     static function taskkill(...$pid){

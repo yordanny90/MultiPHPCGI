@@ -1,7 +1,7 @@
 @echo off
 setlocal
 echo Generando nuevo certificado...
-call "%~dp0utils.bat"
+call "%~dp0mphpcgi-load.bat"
 set name=localhost
 set dir=%~dp0..\
 set _tmp=%dir%tmp\openssl\
@@ -14,34 +14,34 @@ if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%
 )
-openssl.exe genpkey -algorithm RSA -out "%_tmp%\private.key"
+call openssl genpkey -algorithm RSA -out "%_tmp%\private.key"
 if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%
 )
-openssl.exe req -new -key "%_tmp%\private.key" -out "%_tmp%\request.csr" -config "%_tmp%openssl.conf"
+call openssl req -new -key "%_tmp%\private.key" -out "%_tmp%\request.csr" -config "%_tmp%openssl.conf"
 if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%
 )
-openssl.exe x509 -req -days 3650 -in "%_tmp%\request.csr" -signkey "%_tmp%\private.key" -out "%_tmp%\certificate.crt" -extensions v3_ca -extfile "%_tmp%openssl.conf"
+call openssl x509 -req -days 3650 -in "%_tmp%\request.csr" -signkey "%_tmp%\private.key" -out "%_tmp%\certificate.crt" -extensions v3_ca -extfile "%_tmp%openssl.conf"
 if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%
 )
 
 @echo Verificando certificados
-openssl.exe rsa -in "%_tmp%\private.key" -check
+call openssl rsa -in "%_tmp%\private.key" -check
 if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%
 )
-openssl.exe req -in "%_tmp%\request.csr" -noout -text -config "%_tmp%openssl.conf"
+call openssl req -in "%_tmp%\request.csr" -noout -text -config "%_tmp%openssl.conf"
 if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%
 )
-openssl.exe x509 -in "%_tmp%\certificate.crt" -noout -text
+call openssl x509 -in "%_tmp%\certificate.crt" -noout -text
 if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%

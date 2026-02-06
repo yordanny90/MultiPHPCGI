@@ -1,2 +1,3 @@
-# MultiPHPCGI version 1.2
+# MultiPHPCGI version 1.3
+
 Servicio de NGINX+PHPCGI

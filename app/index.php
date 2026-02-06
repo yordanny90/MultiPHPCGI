@@ -1,4 +1,5 @@
 <?php
+
 require __DIR__.'/init.php';
 ini_set('default_charset', 'utf-8');
 set_time_limit(20);
@@ -14,25 +15,19 @@ class index{
             <script type="text/ecmascript" src="/assets.php/app.js?v=<?=APP_VER?>"></script>
         </head>
         <body>
-            <div id="menu">
-                <a href="index.php" title="Inicio">🏠</a>
-                <a href="index.php?op=config" title="Configuración del servicio">Config</a>
-                <a href="index.php?op=info" title="Innformación">Info</a>
-                <a href="index.php?op=phpini" title="Archivo de configuración de php">php.ini</a>
-                <a href="index.php?op=appini" title="Archivo de configuración del servicio">app.ini</a>
-                <a href="index.php?op=proclist" title="Lista de procesos en ejecución">Process</a>
-                <a href="index.php?op=iplist" title="Lista de IP de este dispositivo">IP List</a>
-            </div>
-            <div id="content"><?=$buffer?></div>
+        <div id="menu">
+            <a href="index.php" title="Inicio">🏠</a>
+            <a href="index.php?op=config" title="Configuración del servicio">Config</a>
+            <a href="index.php?op=info" title="Innformación">Info</a>
+            <a href="index.php?op=phpini" title="Archivo de configuración de php">php.ini</a>
+            <a href="index.php?op=appini" title="Archivo de configuración del servicio">app.ini</a>
+            <a href="index.php?op=proclist" title="Lista de procesos en ejecución">Process</a>
+            <a href="index.php?op=iplist" title="Lista de IP de este dispositivo">IP List</a>
+        </div>
+        <div id="content"><?=$buffer?></div>
         </body>
         <?php
         exit;
-    }
-
-    static function GET_(){
-        ?>
-        <p>Aqui podrá configurar su servicio de PHP</p>
-        <?php
     }
 
     static function GET_info(){
@@ -43,16 +38,15 @@ class index{
         <table class="table block"><?php
             $fn_tr('sendmail_from', ini_get('sendmail_from'));
             $fn_tr('sendmail_path', ini_get('sendmail_path'));
-            $fn_tr('APP_VER',APP_VER);
-            $fn_tr('PID',getmypid());
-            $fn_tr('PHP_VERSION',PHP_VERSION);
-            $fn_tr('BINARY',PHP_BINARY);
-            $fn_tr('ROOT_DIR',ROOT_DIR);
-            $fn_tr('BASEDIR',BASEDIR);
-            $fn_tr('INC_DIR',INC_DIR);
-            $fn_tr('CONFIG_DIR',CONFIG_DIR);
-            $fn_tr('PHP_SAPI',PHP_SAPI);
-            $fn_tr('lock_pid',implode(',', Manager::lock_pid()));
+            $fn_tr('APP_VER', APP_VER);
+            $fn_tr('PID', getmypid());
+            $fn_tr('PHP_VERSION', PHP_VERSION);
+            $fn_tr('BINARY', PHP_BINARY);
+            $fn_tr('ROOT_DIR', ROOT_DIR);
+            $fn_tr('BASEDIR', BASEDIR);
+            $fn_tr('INC_DIR', INC_DIR);
+            $fn_tr('CONFIG_DIR', CONFIG_DIR);
+            $fn_tr('PHP_SAPI', PHP_SAPI);
             ?>
         </table>
         <?php
@@ -65,8 +59,7 @@ class index{
             return;
         }
         ob_start();
-        $res=Manager::update_ini($file, [
-        ],[
+        $res=Manager::update_ini($file, [], [
             'PHP'=>[
                 'extension_dir',
                 'extension',
@@ -75,7 +68,7 @@ class index{
             'opcache'=>[
                 'opcache.enable',
             ],
-        ],[
+        ], [
             'PHP'=>[
                 'extension_dir',
                 'extension',
@@ -95,28 +88,10 @@ class index{
         <?php
     }
 
-    static function GET_config(){
-        $config=Manager::getConfig();
-        ?>
-        <div class="pre"><?=toHTML(print_r($config, 1))?></div>
-        <?php
-    }
-
-    static function GET_appini(){
-        $file=INI_FILE;
-        $res=fopen($file, 'r');
-        ?>
-        <h4><?=toHTML($file)?></h4>
-        <div class="">
-            <div class="pre"><?=toHTML(stream_get_contents($res))?></div>
-        </div>
-        <?php
-    }
-
     static function GET_iplist(){
         $config=Manager::getConfig();
         $suffixport='';
-        if(is_numeric($config['nginx']['Port']??null)) $suffixport=':'.$config['nginx']['Port'];
+        if(is_numeric($config['nginx']['Port'] ?? null)) $suffixport=':'.$config['nginx']['Port'];
         ?>
         <table class="table block">
             <?php
@@ -153,12 +128,12 @@ class index{
                 echo '<p>No se encontraron procesos</p>';
                 return;
             }
-            echo '<table class="table block" style="'.($secondary ? 'margin-left: 25px; background-color: #d3d3d3;' : '').'">';
+            echo '<table class="table block" style="'.($secondary?'margin-left: 25px; background-color: #d3d3d3;':'').'">';
             $cols=null;
             foreach($proc as $row){
                 if(!$cols){
                     $cols=array_keys($row);
-                    echo '<tr>'.implode('', array_map(function($h){return '<th>'.htmlentities($h).'</th>';}, $cols)).'</tr>';
+                    echo '<tr>'.implode('', array_map(function($h){ return '<th>'.htmlentities($h).'</th>'; }, $cols)).'</tr>';
                 }
                 $style='';
                 if($row['ProcessId']==$pid){
@@ -166,7 +141,7 @@ class index{
                 }
                 echo '<tr style="'.$style.'">';
                 foreach($cols as $c){
-                    echo '<td style="'.($c=='ProcessId'?'font-weight: bold;':'').'">'.htmlentities($row[$c]??'').'</td>';
+                    echo '<td style="'.($c=='ProcessId'?'font-weight: bold;':'').'">'.htmlentities($row[$c] ?? '').'</td>';
                 }
                 echo '</tr>';
             }
@@ -178,6 +153,15 @@ class index{
             <?php
             $fn_table(Manager::getProcessMyDir('php.exe'));
             if($otros=Manager::getProcessNotMyDir('php.exe')){
+                $fn_table($otros, true);
+            }
+            ?>
+        </div>
+        <h3>PHP-CGI-SPAWNER</h3>
+        <div>
+            <?php
+            $fn_table(Manager::getProcessMyDir('php-cgi-spawner.exe'));
+            if($otros=Manager::getProcessNotMyDir('php-cgi-spawner.exe')){
                 $fn_table($otros, true);
             }
             ?>
@@ -204,7 +188,7 @@ class index{
     }
 
     public static function main(){
-        $method=$_SERVER['REQUEST_METHOD'].'_'.($_GET['op']??'');
+        $method=$_SERVER['REQUEST_METHOD'].'_'.($_GET['op'] ?? '');
         if(method_exists(self::class, $method)){
             ob_start();
             self::$method();

@@ -1,6 +1,6 @@
 @echo off
 setlocal
-call "%~dp0utils.bat"
+call "%~dp0mphpcgi-load.bat"
 set "php_ver=%1"
 set "php_dir=%~dp0..\php\%php_ver%"
 set "php_exe=%php_dir%\php.exe"
@@ -24,52 +24,43 @@ if exist "%php_exe%" (
 	exit /b %ERRORLEVEL%
 )
 
-set "url=https://windows.php.net/downloads/releases/archives/"
-set "phpbase=%php_ver:~0,2%"
-if "%phpbase%"=="5." (
-	set "zipfile=php-%php_ver%-nts-Win32-vc11-x64.zip"
-	for /f %%a in ('curl.exe -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
-	set "zipfile="
-) else if "%phpbase%"=="7." (
-	set "zipfile=php-%php_ver%-nts-Win32-vc14-x64.zip"
-	for /f %%a in ('curl.exe -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
-	set "zipfile=php-%php_ver%-nts-Win32-vc15-x64.zip"
-	for /f %%a in ('curl.exe -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
-	set "zipfile="
-) else if "%phpbase%"=="8." (
-	set "zipfile=php-%php_ver%-nts-Win32-vs16-x64.zip"
-	for /f %%a in ('curl.exe -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
-	set "zipfile=php-%php_ver%-nts-Win32-vs17-x64.zip"
-	for /f %%a in ('curl.exe -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
-	set "zipfile=php-%php_ver%-nts-Win32-vs18-x64.zip"
-	for /f %%a in ('curl.exe -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
-	set "zipfile="
-) else (
-	echo Error: Version de PHP invalida.
-	exit /b 1
-)
-:found
-if "%zipfile%"=="" (
-	echo Error: Version de PHP no encontrada.
-	exit /b 2
-)
-if not exist "%_tmp%" (
-	@mkdir "%_tmp%"
-)
-curl.exe -s -o "%_tmp%\%zipfile%" "%url%%zipfile%"
+set "tmp_php_list=%~dp0..\tmp\php_nts-%php_ver%.txt"
+
+echo Buscando PHP %php_ver%...
+call "%~dp0download_php_nts_list.bat" 0 | findstr "php-%php_ver%-" > "%tmp_php_list%"
 if %ERRORLEVEL% neq 0 (
 	exit /b %ERRORLEVEL%
 )
 
-if not exist "%_tmp%\%zipfile%" (
+set /p php_url=< "%tmp_php_list%"
+for /f %%a in ('call curl -I -s -w "%%{http_code}" "%%php_url%%"') do (
+	if "%%a"=="200" (goto found)
+)
+echo Error: Version de PHP invalida.
+exit /b 1
+
+:found
+echo Encontrado!
+if not exist "%_tmp%" (
+	@mkdir "%_tmp%"
+)
+set "zipfile=php-%php_ver%-nts.zip"
+echo Descargando %php_url%
+call curl -s -o "%_tmp%\%zipfile%" "%php_url%"
+if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo descargar el archivo.
+	exit /b %ERRORLEVEL%
+)
+
+if not exist "%_tmp%\%zipfile%" (
+	echo Error: No se pudo guardar el archivo.
 	exit /b 1
 )
 
 echo "%_tmp%\%zipfile%"
 
 echo Descomprimiendo ZIP...
-7za.exe x -y "%_tmp%\%zipfile%" "-o%php_dir%"
+call 7za x -y "%_tmp%\%zipfile%" "-o%php_dir%"
 if %ERRORLEVEL% neq 0 (
 	del "%_tmp%\%zipfile%"
 	echo Error: No se pudo descomprimir el archivo.

@@ -1,6 +1,6 @@
 @echo off
 setlocal
-call "%~dp0utils.bat"
+call "%~dp0mphpcgi-load.bat"
 set "php_ver=%1"
 set "php_dir=%~dp0..\php\%php_ver%"
 set "php_exe=%php_dir%\php.exe"
@@ -18,12 +18,17 @@ if not exist "%php_exe%" (
 echo Modificando php.ini %php_ver%...
 set "php_ini=%php_dir%\php.ini.tmp"
 copy /Y "%php_dir%\php.ini-production" "%php_ini%"
-powershell -Command "(Get-Content '%php_ini%') -replace '^;\s*(extension_dir\s*=\s*\"ext\")', '$1' | Set-Content '%php_ini%'"
+powershell -Command "(Get-Content '%php_ini%') -replace '^;\s*(opcache\.enable\s*=|cgi.fix_pathinfo\s*=|extension_dir\s*=\s*\"ext\")', '$1' | Set-Content '%php_ini%'"
 if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo configurar el php.ini.
 	exit /b %ERRORLEVEL%
 )
 powershell -Command "(Get-Content '%php_ini%') -replace '^;(extension=(php_)?(sodium|ffi|bz2|intl|ldap|ftp|gd|gd2|gettext|curl|fileinfo|gmp|imap|mbstring|exif|openssl|mysqli|odbc|pgsql|pdo_mysql|pdo_odbc|pdo_pgsql|pdo_sqlite|sqlite3|soap|sockets|zip|tidy|xsl)(.dll)?)\b', '$1' | Set-Content '%php_ini%'"
+if %ERRORLEVEL% neq 0 (
+	echo Error: No se pudo configurar el php.ini.
+	exit /b %ERRORLEVEL%
+)
+powershell -Command "(Get-Content '%php_ini%') -replace '^;(zend_extension=(opcache)(.dll)?)\b', '$1' | Set-Content '%php_ini%'"
 if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo configurar el php.ini.
 	exit /b %ERRORLEVEL%

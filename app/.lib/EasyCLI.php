@@ -4,12 +4,12 @@
  * @class EasyCLI
  */
 class EasyCLI{
-	static protected $tmpdir;
+    static protected $tmpdir;
 
-	protected $cmd;
-	protected $cwd;
-	protected $env;
-	protected $options;
+    protected $cmd;
+    protected $cwd;
+    protected $env;
+    protected $options;
 
     /**
      * Detecta si se puede utilizar un array como comando
@@ -20,40 +20,40 @@ class EasyCLI{
         return PHP_VERSION_ID>=70400;
     }
 
-	public function __construct($cmd, $cwd=null, array $env=[], ?array $options=null){
-		$this->set_cmd($cmd);
-		$this->set_cwd($cwd);
-		$this->set_env($env);
-		$this->set_options($options);
-	}
+    public function __construct($cmd, $cwd=null, array $env=[], ?array $options=null){
+        $this->set_cmd($cmd);
+        $this->set_cwd($cwd);
+        $this->set_env($env);
+        $this->set_options($options);
+    }
 
-	public static function newCleanEnv($cmd, ?string $cwd=null){
-		return new static($cmd, $cwd??getcwd(), self::get_clean_env());
-	}
+    public static function newCleanEnv($cmd, ?string $cwd=null){
+        return new static($cmd, $cwd ?? getcwd(), self::get_clean_env());
+    }
 
 
     public function get_cmd(){
-		return $this->cmd;
-	}
+        return $this->cmd;
+    }
 
-	public function get_cwd(){
-		return $this->cwd;
-	}
+    public function get_cwd(){
+        return $this->cwd;
+    }
 
-	public function get_env(){
-		return $this->env;
-	}
+    public function get_env(){
+        return $this->env;
+    }
 
-	public function get_options(){
-		return $this->options;
-	}
+    public function get_options(){
+        return $this->options;
+    }
 
     /**
      * Si {@see EasyCLI::use_command_array()} es FALSE, automáticamente se escapan los argumentos mediante {@see EasyCLI::command_args()}
      * @param string|array $cmd
      * @return void
      */
-	public function set_cmd($cmd){
+    public function set_cmd($cmd){
         if(is_array($cmd)){
             $cmd=array_values($cmd);
             if(!static::use_command_array()){
@@ -63,47 +63,50 @@ class EasyCLI{
         elseif(!is_string($cmd)){
             $cmd=strval($cmd);
         }
-		$this->cmd=$cmd;
-	}
+        $this->cmd=$cmd;
+    }
 
-	public function set_cwd($cwd){
-		$this->cwd=$cwd;
-	}
+    public function set_cwd($cwd){
+        $this->cwd=$cwd;
+    }
 
-	public function set_env(array $env){
-		if(!isset($env['PATH']) && isset($_SERVER['PATH'])) $env['PATH']=$_SERVER['PATH'];
-		$this->env=$env;
-	}
+    public function set_env(array $env){
+        if(!isset($env['PATH']) && isset($_SERVER['PATH'])) $env['PATH']=$_SERVER['PATH'];
+        $this->env=$env;
+    }
 
-	public function set_options(?array $options){
-		$this->options=$options;
-	}
+    public function set_options(?array $options){
+        $this->options=$options;
+    }
 
-	/**
-	 * @param null|string|resource|array $outBuffer Dirección del archivo de salida (borra el contenido del archivo).<br>
-     * Si es "temp", crea un recurso temporal. No se puede usar {@see \EasyCLI\Proc::getOutfile()}<br>
-	 * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see \EasyCLI\Proc::getOutfile()}<br>
-     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see \EasyCLI\Proc::getOutfile()}<br>
-     * Si es un array, lo usa como $descriptor_spec para {@see proc_open()}, ejemplo: ["file", "php://temp", "w+"]<br>
-	 * Cualquier otro dato, no se crea la tubería
-	 * @param null|string|resource|array $errBuffer Dirección del archivo de errores (borra el contenido del archivo).<br>
-     * Si es "temp", crea un recurso temporal. No se puede usar {@see \EasyCLI\Proc::getErrfile()}<br>
-	 * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see \EasyCLI\Proc::getErrfile()}<br>
-     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see \EasyCLI\Proc::getErrfile()}<br>
+    /**
+     * @param null|string|resource|array $outBuffer Dirección del archivo de salida (borra el contenido del archivo).<br>
+     * Si es "temp", crea un recurso temporal. No se puede usar {@see EasyCLI\Proc::getOutfile()}<br>
+     * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see EasyCLI\Proc::getOutfile()}<br>
+     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see EasyCLI\Proc::getOutfile()}<br>
      * Si es un array, lo usa como $descriptor_spec para {@see proc_open()}, ejemplo: ["file", "php://temp", "w+"]<br>
      * Cualquier otro dato, no se crea la tubería
-     * @return \EasyCLI\Proc|null
+     * @param null|string|resource|array $errBuffer Dirección del archivo de errores (borra el contenido del archivo).<br>
+     * Si es "temp", crea un recurso temporal. No se puede usar {@see EasyCLI\Proc::getErrfile()}<br>
+     * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see EasyCLI\Proc::getErrfile()}<br>
+     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see EasyCLI\Proc::getErrfile()}<br>
+     * Si es un array, lo usa como $descriptor_spec para {@see proc_open()}, ejemplo: ["file", "php://temp", "w+"]<br>
+     * Cualquier otro dato, no se crea la tubería
+     * @return EasyCLI\Proc|null
      */
-	public function open($outBuffer='pipe', $errBuffer='pipe'){
-		$desc_spec=[];
-		$desc_spec[0]=["pipe", "r"];
+    public function open($outBuffer='pipe', $errBuffer='pipe'){
+        $desc_spec=[];
+        $desc_spec[0]=[
+            "pipe",
+            "r"
+        ];
         $desc_spec[1]=self::toPipe($outBuffer);
         $desc_spec[2]=self::toPipe($errBuffer);
         if($desc_spec[1]===null) unset($desc_spec[1]);
         if($desc_spec[2]===null) unset($desc_spec[2]);
-		$proc=\EasyCLI\Proc::start($this->cmd, $desc_spec, $this->cwd, $this->env, $this->options);
-		return $proc;
-	}
+        $proc=EasyCLI\Proc::start($this->cmd, $desc_spec, $this->cwd, $this->env, $this->options);
+        return $proc;
+    }
 
     private static function toPipe($desc_spec){
         if(is_array($desc_spec)){
@@ -116,10 +119,17 @@ class EasyCLI{
             return fopen('php://temp', 'r')?:null;
         }
         elseif($desc_spec==='pipe'){
-            return ["pipe", "w"];
+            return [
+                "pipe",
+                "w"
+            ];
         }
         elseif(is_string($desc_spec)){
-            return ["file", $desc_spec, "w"];
+            return [
+                "file",
+                $desc_spec,
+                "w"
+            ];
         }
         return null;
     }
@@ -128,41 +138,41 @@ class EasyCLI{
         return escapeshellcmd($command).static::args(...$args);
     }
 
-	public static function args(...$args){
-		$res='';
-		foreach($args AS &$arg){
-			$res.=' '.escapeshellarg($arg);
-		}
-		return $res;
-	}
+    public static function args(...$args){
+        $res='';
+        foreach($args as &$arg){
+            $res.=' '.escapeshellarg($arg);
+        }
+        return $res;
+    }
 
     private static $clean_env;
 
     /**
      * @return array
      */
-	public static function get_clean_env(){
-		if(is_array(self::$clean_env)) return self::$clean_env;
-		$env=[];
-		foreach(getenv() as $k=>$v){
-			if(!in_array($k, [
-					'argc',
-					'argv',
-					'DOCUMENT_URI',
-					'SERVER_SOFTWARE',
-					'HTTPS',
-					'DOCUMENT_ROOT',
-					'QUERY_STRING',
-					'SERVER_PROTOCOL'
-				]) && !preg_match('/^(REQUEST_|HTTP_|SCRIPT_|PATH_|PHP_|ORIG_|REDIRECT_|GATEWAY_|CONTEXT_|CONTENT_|FCGI_|XDEBUG_)/', $k)){
-				if(is_string($v2=getenv($k))){
-					$env[$k]=$v2;
-				}
-			}
-		}
-		self::$clean_env=$env;
-		return $env;
-	}
+    public static function get_clean_env(){
+        if(is_array(self::$clean_env)) return self::$clean_env;
+        $env=[];
+        foreach(getenv() as $k=>$v){
+            if(!in_array($k, [
+                    'argc',
+                    'argv',
+                    'DOCUMENT_URI',
+                    'SERVER_SOFTWARE',
+                    'HTTPS',
+                    'DOCUMENT_ROOT',
+                    'QUERY_STRING',
+                    'SERVER_PROTOCOL'
+                ]) && !preg_match('/^(REQUEST_|HTTP_|SCRIPT_|PATH_|PHP_|ORIG_|REDIRECT_|GATEWAY_|CONTEXT_|CONTENT_|FCGI_|XDEBUG_)/', $k)){
+                if(is_string($v2=getenv($k))){
+                    $env[$k]=$v2;
+                }
+            }
+        }
+        self::$clean_env=$env;
+        return $env;
+    }
 
     private static $os_type;
 
@@ -183,33 +193,43 @@ class EasyCLI{
     private static $exists=[];
 
     public static function exist_wmic(): bool{
-        if(is_bool(self::$exists['wmic']??null)) return self::$exists['wmic'];
+        if(is_bool(self::$exists['wmic'] ?? null)) return self::$exists['wmic'];
         exec('wmic /?', $o, $res);
         return self::$exists['wmic']=($res===0);
     }
 
     public static function exist_powershell(): bool{
-        if(is_bool(self::$exists['ps']??null)) return self::$exists['ps'];
+        if(is_bool(self::$exists['ps'] ?? null)) return self::$exists['ps'];
         exec('powershell /?', $o, $res);
         return self::$exists['ps']=($res===0);
     }
 
-	/**
-	 * Obtiene el comando completo de un proceso a partir de su PID.
-	 * Compatibilidad comprobada en windows (powershell/wmic) y linux (ps).
-	 * ## El uso en mac y bsd no está probado (uso de ps según documentación)
-	 *
-	 * @param int $pid
-	 * @return string|null
-	 */
+    /**
+     * Obtiene el comando completo de un proceso a partir de su PID.
+     * Compatibilidad comprobada en windows (powershell/wmic) y linux (ps).
+     * ## El uso en mac y bsd no está probado (uso de ps según documentación)
+     *
+     * @param int $pid
+     * @return string|null
+     */
     public static function getCommand(int $pid){
         if(self::getOSType()=='win'){
             $data=self::windows_process_list(['ProcessId'=>$pid]);
-            $data=$data[0]['CommandLine']??null;
+            $data=$data[0]['CommandLine'] ?? null;
             return $data;
         }
-        elseif(in_array(self::getOSType(),['mac','bsd','linux'])){
-            $proc=self::newCleanEnv(['ps','-p',$pid,'-o','pid,command'])->open();
+        elseif(in_array(self::getOSType(), [
+            'mac',
+            'bsd',
+            'linux'
+        ])){
+            $proc=self::newCleanEnv([
+                'ps',
+                '-p',
+                $pid,
+                '-o',
+                'pid,command'
+            ])->open();
             if(!$proc) return null;
             if($proc->await(30)) $proc->terminate();
             $out=$proc->out_read();
@@ -241,7 +261,7 @@ class EasyCLI{
      * @see EasyCLI::wmic_process_list()
      */
     public static function windows_process_list(?array $eq=null, ?array $diff=null, ?array $contains=null, ?array $no_contains=null){
-        return self::powershell_process_list($eq, $diff, $contains, $no_contains)??self::wmic_process_list($eq, $diff, $contains, $no_contains);
+        return self::powershell_process_list($eq, $diff, $contains, $no_contains) ?? self::wmic_process_list($eq, $diff, $contains, $no_contains);
     }
 
     /**
@@ -266,7 +286,13 @@ class EasyCLI{
      */
     public static function powershell_process_list(?array $eq=null, ?array $diff=null, ?array $contains=null, ?array $no_contains=null){
         $where=[];
-        $col_filter=['ProcessId', 'ParentProcessId', 'CommandLine', 'Name', 'ExecutablePath'];
+        $col_filter=[
+            'ProcessId',
+            'ParentProcessId',
+            'CommandLine',
+            'Name',
+            'ExecutablePath'
+        ];
         foreach((array)$eq as $name=>$filter){
             if(!in_array($name, $col_filter)) continue;
             $filter=(array)$filter;
@@ -312,7 +338,11 @@ class EasyCLI{
             $where='';
         }
         $command='Get-CimInstance Win32_Process '.$where.'| Select-Object ProcessId,ParentProcessId,CommandLine,Name,ExecutablePath | ConvertTo-Csv';
-        $proc=EasyCLI::newCleanEnv(['powershell','-Command', $command])->open();
+        $proc=EasyCLI::newCleanEnv([
+            'powershell',
+            '-Command',
+            $command
+        ])->open();
         if(!$proc) return null;
         $buffer=tmpfile();
         if($proc->await(30)) $proc->terminate();
@@ -332,7 +362,7 @@ class EasyCLI{
                 continue;
             }
             if(count($row)>$colsCount){
-                $row=array_merge(array_slice($row, 0, 1),[implode(',',array_slice($row, 1, -4))],array_slice($row, -4));
+                $row=array_merge(array_slice($row, 0, 1), [implode(',', array_slice($row, 1, -4))], array_slice($row, -4));
             }
             if(count($row)!=$colsCount){
                 continue;
@@ -366,10 +396,16 @@ class EasyCLI{
      */
     public static function wmic_process_list(?array $eq=null, ?array $diff=null, ?array $contains=null, ?array $no_contains=null){
         $where=[];
-        $col_filter=['ProcessId', 'ParentProcessId', 'CommandLine', 'Name', 'ExecutablePath'];
+        $col_filter=[
+            'ProcessId',
+            'ParentProcessId',
+            'CommandLine',
+            'Name',
+            'ExecutablePath'
+        ];
         foreach((array)$eq as $name=>$filter){
             if(!in_array($name, $col_filter)) continue;
-            $filter=array_map('addslashes',(array)$filter);
+            $filter=array_map('addslashes', (array)$filter);
             if(count($filter)>0){
                 $tmp=[];
                 foreach($filter as $n){
@@ -381,7 +417,7 @@ class EasyCLI{
         }
         foreach((array)$diff as $name=>$filter){
             if(!in_array($name, $col_filter)) continue;
-            $filter=array_map('addslashes',(array)$filter);
+            $filter=array_map('addslashes', (array)$filter);
             if(count($filter)>0){
                 $tmp=[];
                 foreach($filter as $n){
@@ -393,7 +429,7 @@ class EasyCLI{
         }
         foreach((array)$contains as $name=>$filter){
             if(!in_array($name, $col_filter)) continue;
-            $filter=array_map('addslashes',(array)$filter);
+            $filter=array_map('addslashes', (array)$filter);
             if(count($filter)>0){
                 $tmp=[];
                 foreach($filter as $n){
@@ -405,7 +441,7 @@ class EasyCLI{
         }
         foreach((array)$no_contains as $name=>$filter){
             if(!in_array($name, $col_filter)) continue;
-            $filter=array_map('addslashes',(array)$filter);
+            $filter=array_map('addslashes', (array)$filter);
             if(count($filter)>0){
                 $tmp=[];
                 foreach($filter as $n){
@@ -416,9 +452,19 @@ class EasyCLI{
             }
         }
         if(count($where)>0){
-            $where=['where','"'.implode(' and ', $where).'"'];
+            $where=[
+                'where',
+                '"'.implode(' and ', $where).'"'
+            ];
         }
-        $cmd=implode(' ', ['wmic','process', ...$where, 'get','CommandLine,Name,ExecutablePath,ParentProcessId,ProcessId','/format:csv']);
+        $cmd=implode(' ', [
+            'wmic',
+            'process',
+            ...$where,
+            'get',
+            'CommandLine,Name,ExecutablePath,ParentProcessId,ProcessId',
+            '/format:csv'
+        ]);
         $proc=EasyCLI::newCleanEnv($cmd)->open();
         if(!$proc) return null;
         $buffer=tmpfile();
@@ -439,7 +485,7 @@ class EasyCLI{
             }
             $row=explode(',', $line);
             if(count($row)>$colsCount){
-                $row=array_merge(array_slice($row, 0, 1),[implode(',',array_slice($row, 1, -4))],array_slice($row, -4));
+                $row=array_merge(array_slice($row, 0, 1), [implode(',', array_slice($row, 1, -4))], array_slice($row, -4));
             }
             if(count($row)!=$colsCount){
                 continue;
