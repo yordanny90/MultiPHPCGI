@@ -1,0 +1,1 @@
+# Carpeta de configuraciones de MultiPHPCGI
