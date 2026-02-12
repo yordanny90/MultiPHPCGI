@@ -1,6 +1,6 @@
 @echo off
 setlocal
-call "%~dp0mphpcgi-load.bat"
+call "%~dp0_load.bat"
 set "php_ver=%1"
 set "php_dir=%~dp0..\php\%php_ver%"
 set "php_exe=%php_dir%\php.exe"

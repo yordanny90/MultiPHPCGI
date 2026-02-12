@@ -1,1 +1,0 @@
-# Carpeta de archivos temporales

@@ -1,2 +1,2 @@
 @echo off
-mphp "%~dp0\composer\composer.phar" %*
+call "%~dp0mphp.bat" "%~dp0\composer\composer.phar" %*

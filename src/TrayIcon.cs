@@ -20,7 +20,7 @@ public class TrayIcon
     {
         this.dir = dir;
         this.notifyIcon = new NotifyIcon();
-        this.notifyIcon.Icon = new Icon(Path.Combine(this.dir, "app", "favicon.ico")); // Ruta correcta al icono
+        this.notifyIcon.Icon = new Icon(Path.Combine(this.dir, "bin", "app", "favicon.ico")); // Ruta correcta al icono
         this.notifyIcon.Visible = true;
         this.notifyIcon.Text = "MultiPHPCGI (" + dir + ")";
         this.contextMenu = new ContextMenuStrip();
@@ -36,14 +36,15 @@ public class TrayIcon
         AddMenuCmd("config.ini", Path.Combine(this.dir, "inc", "config.ini"), "", GetShellIcon(269));
         this.contextMenu.Items.Add(this.serverMenu);
         this.contextMenu.Items.Add(new ToolStripSeparator());
-        AddMenuCmd("Detener Servicios", Path.Combine(this.dir, "service-stop.bat"), "", GetShellIcon(219));
         AddMenuCmd("Iniciar Servicios", Path.Combine(this.dir, "service-start.bat"), "", GetShellIcon(137));
+        AddMenuCmd("Detener Servicios", Path.Combine(this.dir, "service-stop.bat"), "", GetShellIcon(219));
         ToolStripMenuItem menuItem = new ToolStripMenuItem("Variables del sistema", GetShellIcon(314));
         menuItem.Click += (sender, e) => ExecuteCmd("SystemPropertiesAdvanced.exe", "");
         opciones.DropDownItems.Add(menuItem);
         menuItem = new ToolStripMenuItem("Monitor de recursos", GetShellIcon(314));
         menuItem.Click += (sender, e) => ExecuteCmd("resmon.exe", "");
         opciones.DropDownItems.Add(menuItem);
+        opciones.DropDownItems.Add(new ToolStripSeparator());
         menuItem = new ToolStripMenuItem("Detener/Salir", GetShellIcon(27));
         menuItem.Click += (sender, e) =>
         {
@@ -112,10 +113,10 @@ public class TrayIcon
         }
         submenu.DropDownItems.Add(new ToolStripSeparator());
         btn = new ToolStripMenuItem("Agregar Servidor", GetShellIcon(296));
-        btn.Click += (s, args) => ExecuteCmd("add-server", "");
+        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "add-server.bat"), "");
         submenu.DropDownItems.Add(btn);
         btn = new ToolStripMenuItem("Regenerar .conf", GetShellIcon(238));
-        btn.Click += (s, args) => ExecuteCmd("init-servers", "");
+        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "init-servers.bat"), "");
         submenu.DropDownItems.Add(btn);
     }
 

@@ -1,6 +1,6 @@
 @echo off
 setlocal
-call "%~dp0mphpcgi-load.bat"
+call "%~dp0_load.bat"
 set "nginx_ver=%1"
 set "nginx_dir=%~dp0..\nginx\%nginx_ver%"
 set "nginx_exe=%nginx_dir%\nginx.exe"

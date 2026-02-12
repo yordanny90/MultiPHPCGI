@@ -1,14 +1,19 @@
 @echo off
 setlocal
+call "%~dp0_load.bat"
 set "phpdir=%~dp0..\inc\phpdir.txt"
 set /p php_ver=<"%phpdir%"
 if "%php_ver%" == "" (
-	echo Debe indicar la carpeta de PHP en "%phpdir%"
-	exit /b 1
+    start /WAIT cmd /c "echo.Debe indicar la carpeta de PHP en: & echo %phpdir% & echo. & pause"
+    exit /b 1
 )
-set "phpbin=%~dp0..\php\%php_ver%\php.exe"
-if not exist "%phpbin%" (
-	call "%~dp0install-php" "%php_ver%"
-	if not exist "%phpbin%" exit /b 1
+set "phpini=%~dp0..\php\%php_ver%\php.ini"
+if not exist "%phpini%" (
+	start /WAIT cmd /c call "%~dp0install-php.bat" %php_ver% rebuild
+	if not exist "%phpini%" (
+		exit /b 1
+	)
 )
-"%phpbin%" %*
+set "phpdir="
+set "phpini="
+"%~dp0..\php\%php_ver%\php.exe" %*
