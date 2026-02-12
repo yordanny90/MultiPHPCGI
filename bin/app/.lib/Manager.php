@@ -570,23 +570,13 @@ class Manager{
      */
     static function addServer(?string $_dir=null, ?string $_php=null){
         $servers=self::getServer_list();
-        $maxPort=80;
-        $maxSSLPort=8080;
-        $maxCGIPort=9080;
-        foreach($servers AS $server){
-            if(is_numeric($server['Port'])){
-                $maxPort=max($maxPort, intval($server['Port']));
-            }
-            ++$maxPort;
-            if(is_numeric($server['SSLPort'])){
-                $maxSSLPort=max($maxSSLPort, intval($server['SSLPort']));
-            }
-            ++$maxSSLPort;
-            if(is_numeric($server['CGIPort'])){
-                $maxCGIPort=max($maxCGIPort, intval($server['CGIPort']));
-            }
-            ++$maxCGIPort;
-        }
+        $maxPort=max(80, ...array_map('intval', array_filter(array_column($servers, 'Port'), 'is_numeric')));
+        $maxSSLPort=max(8000+$maxPort, ...array_map('intval', array_filter(array_column($servers, 'SSLPort'), 'is_numeric')));
+        $maxCGIPort=max(9000+$maxPort, ...array_map('intval', array_filter(array_column($servers, 'CGIPort'), 'is_numeric')));
+        ++$maxPort;
+        ++$maxSSLPort;
+        ++$maxCGIPort;
+        echo "Puertos: ".$maxPort.", ".$maxSSLPort.", ".$maxCGIPort."\n\n";
         $server=[
             'SSLPort'=>$maxSSLPort,
             'Port'=>$maxPort,
@@ -620,7 +610,7 @@ class Manager{
         }
 
         $server_list=array_keys($servers);
-        echo "Servidores existentes: ".implode("\t", $server_list)."\n";
+        echo "Servidores existentes: ".implode(", ", $server_list)."\n";
 
         $name=self::PREFIX_SERVER_NAME.preg_replace('/[^\w]+/', '_', basename($server['Root']));
         $suf='';
@@ -649,7 +639,7 @@ class Manager{
 
         $line=self::cli_confirm("Desea generar el conf del nuevo servidor ahora?", ['Y','N'], 'Y');
         if($line!='N'){
-            passthru('mphpcgi.bat init-servers');
+            passthru('mphpcgi.bat init-servers '.$name);
             passthru('mphpcgi.bat nginx-test');
             echo "Presione [ENTER] para continuar...";
             readline();
@@ -792,9 +782,17 @@ class Manager{
      */
     static function initServers(?string $n=null){
         $servers=self::getServer_list();
+        if($n!==null){
+            $name=$n;
+            if(isset($servers[$name])){
+                $saved=self::initServer($name, $servers[$name], true);
+                if($saved) echo $name."\n";
+            }
+            return;
+        }
         foreach($servers AS $name=>$server){
-            if($n!==null && $name!==$n) continue;
-            self::initServer($name, $server);
+            $saved=self::initServer($name, $server);
+            if($saved) echo $name."\n";
         }
     }
 
@@ -833,7 +831,9 @@ class Manager{
         $replace=array_filter($replace);
         if(count($replace)!=$c) throw new ResponseErr('Servidor "'.$name.'" inválido');
         $new=str_replace(array_keys($replace), array_values($replace), $tpl);
-        return file_put_contents($dest, $new);
+        mkdir(dirname($dest), 0777, true);
+        $saved=file_put_contents($dest, $new);
+        return $saved;
     }
 
     /**

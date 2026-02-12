@@ -146,8 +146,8 @@ $fn_list=[
             array_walk($server, function($v,$k){echo " ".$k."=".$v."\n";});
         }
     },
-    'init-servers'=>function(){
-        Manager::initServers();
+    'init-servers'=>function(...$_){
+        Manager::initServers(...$_);
     },
     'add-server'=>function(...$_){
         Manager::addServer(...$_);

@@ -113,10 +113,10 @@ public class TrayIcon
         }
         submenu.DropDownItems.Add(new ToolStripSeparator());
         btn = new ToolStripMenuItem("Agregar Servidor", GetShellIcon(296));
-        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "add-server.bat"), "");
+        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "mphpcgi.bat"), "add-server");
         submenu.DropDownItems.Add(btn);
         btn = new ToolStripMenuItem("Regenerar .conf", GetShellIcon(238));
-        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "init-servers.bat"), "");
+        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "mphpcgi.bat"), "init-servers");
         submenu.DropDownItems.Add(btn);
     }
 
