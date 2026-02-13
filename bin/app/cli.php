@@ -56,25 +56,33 @@ $fn_list=[
     },
     'php-bin'=>function($ver=null){
         if(substr_count($ver, '.')<2) $ver=Manager::php_find_version($ver);
-        echo Manager::php_bin($ver);
+        $res=Manager::php_bin($ver);
+        if($res===null) throw new ResponseErr('No encontrado');
+        echo $res;
     },
     'phpcgi-bin'=>function($ver=null){
         if(substr_count($ver, '.')<2) $ver=Manager::php_find_version($ver);
-        echo Manager::phpcgi_bin($ver);
+        $res=Manager::phpcgi_bin($ver);
+        if($res===null) throw new ResponseErr('No encontrado');
+        echo $res;
     },
     'php-ini'=>function($ver=null){
         if(substr_count($ver, '.')<2) $ver=Manager::php_find_version($ver);
-        echo Manager::php_ini($ver);
+        $res=Manager::php_ini($ver);
+        if($res===null) throw new ResponseErr('No encontrado');
+        echo $res;
     },
     'php-list'=>function(){
-        echo implode("\n", Manager::php_list());
+        $list=Manager::php_list();
+        echo implode("\n", $list);
     },
     'php-list-online'=>function($dl=null){
-        echo implode("\n", Manager::php_nts_list_online(boolval($dl)));
+        $list=Manager::php_nts_list_online(boolval($dl));
+        echo implode("\n", $list);
     },
     'php-bat'=>function(){
         $list=Manager::php_make_bat();
-        print_r($list);
+        echo implode("\n", $list);
     },
     'test-ini'=>function($ver=null){
         $file=Manager::php_ini($ver);

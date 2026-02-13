@@ -51,7 +51,7 @@ if not exist "%_tmp%\%name%\%zipfile%" (
 )
 
 echo Descomprimiendo ZIP...
-call 7za x "%_tmp%\%name%\%zipfile%" "-o%_tmp%\%name%\"
+call 7za x -y "%_tmp%\%name%\%zipfile%" "-o%_tmp%\%name%\"
 if %ERRORLEVEL% neq 0 (
 	rmdir /s /q "%_tmp%\%name%"
 	echo Error: No se pudo descomprimir el archivo.

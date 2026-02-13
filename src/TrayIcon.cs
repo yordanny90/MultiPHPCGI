@@ -13,6 +13,7 @@ public class TrayIcon
 {
     private NotifyIcon notifyIcon;
     private ContextMenuStrip contextMenu;
+    private ToolStripMenuItem phpMenu;
     private ToolStripMenuItem serverMenu;
     private string dir;
 
@@ -24,6 +25,9 @@ public class TrayIcon
         this.notifyIcon.Visible = true;
         this.notifyIcon.Text = "MultiPHPCGI (" + dir + ")";
         this.contextMenu = new ContextMenuStrip();
+        this.phpMenu = new ToolStripMenuItem("PHP", GetShellIcon(35));
+        this.phpMenu.DropDownOpening += FillPHP;
+        this.phpMenu.DropDownItems.Add(new ToolStripSeparator());
         this.serverMenu = new ToolStripMenuItem("Servidores", GetShellIcon(35));
         this.serverMenu.DropDownOpening += FillServers;
         this.serverMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -32,6 +36,8 @@ public class TrayIcon
         this.contextMenu.Items.Add(opciones);
         AddMenuCmd(dir, "explorer", "\"" + dir + "\"", GetShellIcon(3));
         AddMenuCmd("CMD", Path.Combine(this.dir, "mcli.bat"), "", GetShellIcon(71));
+        this.contextMenu.Items.Add(new ToolStripSeparator());
+        this.contextMenu.Items.Add(this.phpMenu);
         this.contextMenu.Items.Add(new ToolStripSeparator());
         AddMenuCmd("config.ini", Path.Combine(this.dir, "inc", "config.ini"), "", GetShellIcon(269));
         this.contextMenu.Items.Add(this.serverMenu);
@@ -89,24 +95,24 @@ public class TrayIcon
     {
         ToolStripMenuItem submenu=this.serverMenu;
         submenu.DropDownItems.Clear();
-        string carpetaConf=Path.Combine(this.dir, "conf", "nginx", "conf", "sites-enabled");
+        string carpeta=Path.Combine(this.dir, "conf", "nginx", "conf", "sites-enabled");
 
         ToolStripMenuItem btn = new ToolStripMenuItem("Explorar", GetShellIcon(3));
-        btn.Click += (s, args) => ExecuteCmd("explorer", carpetaConf);
+        btn.Click += (s, args) => ExecuteCmd("explorer", carpeta);
         submenu.DropDownItems.Add(btn);
         submenu.DropDownItems.Add(new ToolStripSeparator());
-        if (Directory.Exists(carpetaConf))
+        if (Directory.Exists(carpeta))
         {
             // LEER todos los .conf ORDENADOS alfabéticamente
-            string[] archivosConf = Directory.GetFiles(carpetaConf, "*.conf", SearchOption.TopDirectoryOnly);
+            string[] subdirs = Directory.GetFiles(carpeta, "*.conf", SearchOption.TopDirectoryOnly);
 
-            if (archivosConf.Length > 0)
+            if (subdirs.Length > 0)
             {
-                foreach (string archivoCompleto in archivosConf)
+                foreach (string fullpath in subdirs)
                 {
-                    string nombreConf = Path.GetFileNameWithoutExtension(archivoCompleto);
+                    string nombreConf = Path.GetFileNameWithoutExtension(fullpath);
                     btn = new ToolStripMenuItem(nombreConf + ".conf ", GetShellIcon(269));
-                    btn.Click += (s, args) => ExecuteCmd(archivoCompleto, "");
+                    btn.Click += (s, args) => ExecuteCmd(fullpath, "");
                     submenu.DropDownItems.Add(btn);
                 }
             }
@@ -117,6 +123,38 @@ public class TrayIcon
         submenu.DropDownItems.Add(btn);
         btn = new ToolStripMenuItem("Regenerar .conf", GetShellIcon(238));
         btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "mphpcgi.bat"), "init-servers");
+        submenu.DropDownItems.Add(btn);
+    }
+
+    private void FillPHP(object sender, EventArgs e)
+    {
+        ToolStripMenuItem submenu=this.phpMenu;
+        submenu.DropDownItems.Clear();
+        string carpeta=Path.Combine(this.dir, "php");
+
+        ToolStripMenuItem btn = new ToolStripMenuItem("Explorar", GetShellIcon(3));
+        btn.Click += (s, args) => ExecuteCmd("explorer", carpeta);
+        submenu.DropDownItems.Add(btn);
+        submenu.DropDownItems.Add(new ToolStripSeparator());
+        if (Directory.Exists(carpeta))
+        {
+            // LEER todos los .conf ORDENADOS alfabéticamente
+            string[] subdirs = Directory.GetDirectories(carpeta, "*", SearchOption.TopDirectoryOnly);
+
+            if (subdirs.Length > 0)
+            {
+                foreach (string fullpath in subdirs)
+                {
+                    string nombreConf = Path.GetFileName(fullpath);
+                    btn = new ToolStripMenuItem(nombreConf, GetShellIcon(269));
+                    btn.Click += (s, args) => ExecuteCmd(Path.Combine(fullpath, "php.ini"), "");
+                    submenu.DropDownItems.Add(btn);
+                }
+            }
+        }
+        submenu.DropDownItems.Add(new ToolStripSeparator());
+        btn = new ToolStripMenuItem("Instalar PHP", GetShellIcon(296));
+        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "install-php.bat"), "-ux");
         submenu.DropDownItems.Add(btn);
     }
 

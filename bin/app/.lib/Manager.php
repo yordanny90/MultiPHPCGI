@@ -312,7 +312,7 @@ class Manager{
      */
     static function install_php($ver){
         if(!preg_match('/^\d+\.\d+\.\d+$/', $ver)) return;
-        passthru('install-php '.$ver);
+        passthru('start /WAIT cmd /c install-php '.$ver);
     }
 
     /**
@@ -321,7 +321,7 @@ class Manager{
      */
     static function install_nginx($ver){
         if(!preg_match('/^\d+\.\d+\.\d+$/', $ver)) return;
-        passthru('install-nginx '.$ver);
+        passthru('start /WAIT cmd /c install-nginx '.$ver);
     }
 
     /**
@@ -378,8 +378,7 @@ class Manager{
         if($ver===null) $ver=self::getNginxDir();
         $bin=APP_DIR_NGINX.'\\'.$ver.'\\nginx.exe';
         if(!is_file($bin) || !is_dir(SITES_DIR)){
-            if(!$install) return null;
-            self::install_nginx($ver);
+            if($install) self::install_nginx($ver);
             if(!is_file($bin)) return null;
         }
         return $bin;
@@ -389,18 +388,18 @@ class Manager{
         if($ver===null) $ver=self::getPhpDir() ?? null;
         $bin=APP_DIR_PHP.'\\'.$ver.'\\php-cgi.exe';
         if(!is_file($bin)){
-            if(!$install) return null;
-            self::install_php($ver);
+            if($install) self::install_php($ver);
             if(!is_file($bin)) return null;
         }
         return $bin;
     }
 
-    static function php_bin($ver=null){
+    static function php_bin($ver=null, $install=false){
         if($ver===null) $ver=self::getPhpDir() ?? null;
         $bin=APP_DIR_PHP.'\\'.$ver.'\\php.exe';
         if(!is_file($bin)){
-            return null;
+            if($install) self::install_php($ver);
+            if(!is_file($bin)) return null;
         }
         return $bin;
     }
@@ -887,9 +886,13 @@ class Manager{
         return $pids;
     }
 
+    /**
+     * @return bool
+     * @throws ResponseErr
+     */
     static function nginx_test(){
-        $nginx=self::nginx_bin();
-        if(!$nginx) return false;
+        $nginx=self::nginx_bin(null, true);
+        if(!$nginx) throw new ResponseErr('NGINX no instalado');
         $cmd=[
             $nginx,
             '-t',
