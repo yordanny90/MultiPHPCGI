@@ -31,7 +31,7 @@ exit /b 0
 :install
 echo Buscando PHP %php_ver%...
 set php_url=
-for /F "usebackq delims=" %%a IN (`call "%~dp0download_php_nts_list.bat" -v ^| findstr "php-%php_ver%-"`) do (
+for /F "usebackq delims=" %%a IN (`call "%~dp0download_php_nts_list.bat" -v ^| find "php-%php_ver%-"`) do (
     SET "php_url=%%a"
     goto done
 )

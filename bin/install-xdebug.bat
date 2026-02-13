@@ -20,12 +20,23 @@ set "tmp_xdebug=%~dp0..\tmp\php_xdebug-%verbase%.dll"
 set "tmp_xdebug_list=%~dp0..\tmp\php_xdebug-%verbase%.txt"
 
 echo Buscando XDEBUG para PHP %verbase%...
-call "%~dp0download_xdebug_nts_list.bat" | find "-%verbase%-" > "%tmp_xdebug_list%"
-if %ERRORLEVEL% neq 0 (
-	exit /b %ERRORLEVEL%
+set xdebug_url=
+for /F "usebackq delims=" %%a IN (`call "%~dp0download_xdebug_nts_list.bat" -v ^| find "-%verbase%-"`) do (
+    SET "xdebug_url=%%a"
+    goto done
 )
-set /p xdebug_url=< "%tmp_xdebug_list%"
+:done
+for /f %%a in ('call curl -I -s -w "%%{http_code}" "%%xdebug_url%%"') do (
+	if "%%a"=="200" (
+	    goto found
+	)
+)
+echo Error: Version de XDEBUG PHP no encontrada. >&2
+if %ux%==1 ( pause )
+exit /b 1
 
+:found
+echo Encontrado!
 echo Descargando %xdebug_url%
 call curl -s -o "%tmp_xdebug%" "%xdebug_url%"
 if %ERRORLEVEL% neq 0 (

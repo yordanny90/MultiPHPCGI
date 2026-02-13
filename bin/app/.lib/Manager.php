@@ -555,7 +555,7 @@ class Manager{
     }
 
     static function php_nts_list_online_file($reload=false){
-        exec(APP_DIR_BIN.'/download_php_nts_list.bat -o '.($reload?'-d':''), $out);
+        exec(APP_DIR_BIN.'/download_php_nts_list.bat '.($reload?'-f':''), $out);
         if(($f=array_pop($out)) && is_file(($f))){
             $f=realpath($f);
         }
