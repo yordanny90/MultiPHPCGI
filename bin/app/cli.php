@@ -10,12 +10,10 @@ ini_set('error_log', ROOT_DIR.'\tmp\php_error.log');
 define('APP_DIR_BIN', ROOT_DIR.'\bin');
 define('APP_DIR_PHP', ROOT_DIR.'\php');
 define('APP_DIR_NGINX', ROOT_DIR.'\nginx');
-define('APP_DIR_CONFIG', ROOT_DIR.'\conf');
-define('SITES_DIR', APP_DIR_CONFIG.'\nginx\conf\sites-enabled');
-define('NGINX_LOG_DIR', APP_DIR_CONFIG.'\nginx\logs');
+define('APP_DIR_USR', ROOT_DIR.'\usr');
+define('APP_DIR_SITES', APP_DIR_USR.'\servers');
 define('APP_DIR_INC', ROOT_DIR.'\inc');
-define('INI_FILE', APP_DIR_INC.'\config.ini');
-define('APP_VER', '1.3');
+define('APP_VER', '1.3.1');
 
 $fn_list=[
     '-?'=>function() use (&$fn_list){
@@ -46,6 +44,9 @@ $fn_list=[
     },
     'nginx-log-clear'=>function(){
         Manager::nginx_log_clear();
+    },
+    'install-nginx'=>function(string $v='', ...$_){
+        Manager::install_nginx($v);
     },
     'php-stop'=>function(){
         $done=Manager::php_stop();
@@ -84,32 +85,16 @@ $fn_list=[
         $list=Manager::php_make_bat();
         echo implode("\n", $list);
     },
-    'test-ini'=>function($ver=null){
-        $file=Manager::php_ini($ver);
-        if(!$file){
-            throw new ResponseErr('Archivo no encontrado');
-        }
-        $changes=[
-            'PHP'=>[
-                'extension_dir',
-                'extension',
-                'zend_extension',
-            ],
-            'opcache'=>[
-                'opcache.enable',
-            ],
-        ];
-        echo $file."\n";
-        echo "\n--- Habilitados ---\n\n";
-        Manager::update_ini($file, [], $changes, [], null, true);
-        echo "\n--- Deshabilitados ---\n\n";
-        Manager::update_ini($file, [], [], $changes, null, true);
-    },
-    'port-listening'=>function(?string $port=null){
-        $ports=Manager::portListening($port);
+    'port-listen'=>function(...$ports){
+        $porc=[];
         foreach($ports as $port){
-            print_r($port);
+            $ps=Manager::portCheck($port);
+            foreach($ps as $p){
+                $porc[$p['PID']]??=[];
+                $porc[$p['PID']][]=$p['Local Address'];
+            }
         }
+        print_r($porc);
     },
     'get-url'=>function($https=null, ?string $port=null){
         $suffix=(is_numeric($port) && $port>1?':'.intval($port):'');
@@ -162,6 +147,27 @@ $fn_list=[
     },
     'get-process'=>function(...$_){
         Manager::process_list(...$_);
+    },
+    'test-ini'=>function($ver=null){
+        $file=Manager::php_ini($ver);
+        if(!$file){
+            throw new ResponseErr('Archivo no encontrado');
+        }
+        $changes=[
+            'PHP'=>[
+                'extension_dir',
+                'extension',
+                'zend_extension',
+            ],
+            'opcache'=>[
+                'opcache.enable',
+            ],
+        ];
+        echo $file."\n";
+        echo "\n--- Habilitados ---\n\n";
+        Manager::update_ini($file, [], $changes, [], null, true);
+        echo "\n--- Deshabilitados ---\n\n";
+        Manager::update_ini($file, [], [], $changes, null, true);
     },
 ];
 try{

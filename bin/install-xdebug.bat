@@ -1,7 +1,7 @@
 @echo off
 setlocal
 call "%~dp0_load.bat"
-set "php_ver=%1"
+set "php_ver=%~1"
 set "php_dir=%~dp0..\php\%php_ver%"
 set "php_exe=%php_dir%\php.exe"
 if "%php_ver%"=="" (
@@ -20,7 +20,7 @@ set "tmp_xdebug=%~dp0..\tmp\php_xdebug-%verbase%.dll"
 set "tmp_xdebug_list=%~dp0..\tmp\php_xdebug-%verbase%.txt"
 
 echo Buscando XDEBUG para PHP %verbase%...
-call "%~dp0download_xdebug_nts_list.bat" 0 | find "-%verbase%-" > "%tmp_xdebug_list%"
+call "%~dp0download_xdebug_nts_list.bat" | find "-%verbase%-" > "%tmp_xdebug_list%"
 if %ERRORLEVEL% neq 0 (
 	exit /b %ERRORLEVEL%
 )

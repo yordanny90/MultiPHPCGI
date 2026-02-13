@@ -5,36 +5,49 @@ class Manager{
     const PREFIX_SERVER_NAME='server.';
     const PREG_SERVER_NAME='/^server\.(\w+)$/';
 
-    static function getNginxDir(){
-        return file_get_contents(APP_DIR_INC.'/nginxdir.txt');
+    /**
+     * @return string
+     * @throws ResponseErr
+     */
+    static function getNginxVer(){
+        $nginx=strval(static::getConfig()['nginx'] ?? '');
+        return $nginx;
     }
 
     static function getPhpDir(){
-        return file_get_contents(APP_DIR_INC.'/phpdir.txt');
+        list($ver, $_)=explode("\n", file_get_contents(APP_DIR_INC.'/phpdir.txt'), 2);
+        return $ver;
     }
 
     /**
      * @return array
      * Array datos:
-     * - server.*
+     * - nginx
+     * - [server.*]
      *   - SSLPort
      *   - Port
      *   - CGIPort
      *   - CGIMaxProc
      *   - PHP
      *   - Root
-     * @throws Exception
+     * @throws ResponseErr
      */
     static function getConfig(): array{
-        $config=parse_ini_file(INI_FILE, true, INI_SCANNER_RAW);
-        if($config===false) throw new Exception('Error al leer config.ini');
+        $config=parse_ini_file(self::config_file(), true, INI_SCANNER_RAW);
+        if($config===false) throw new ResponseErr('Error al leer config.ini');
         return $config;
+    }
+
+    static function config_file(){
+        $file=APP_DIR_USR.'\config.ini';
+        if(!is_file($file)) copy(APP_DIR_INC.'\config.ini', $file);
+        return $file;
     }
 
     /**
      * @param array|null $config
      * @return array|null
-     * @throws Exception
+     * @throws ResponseErr
      */
     static function getServer_list(?array $config=null){
         $config??=self::getConfig();
@@ -319,9 +332,9 @@ class Manager{
      * @param $ver
      * @return void
      */
-    static function install_nginx($ver){
+    static function install_nginx(string $ver=''){
         if(!preg_match('/^\d+\.\d+\.\d+$/', $ver)) return;
-        passthru('start /WAIT cmd /c install-nginx '.$ver);
+        exec('start /WAIT cmd /c install-nginx.bat '.$ver);
     }
 
     /**
@@ -374,10 +387,9 @@ class Manager{
         return $m[1];
     }
 
-    static function nginx_bin($ver=null, $install=false){
-        if($ver===null) $ver=self::getNginxDir();
+    static function nginx_bin(string $ver, $install=false){
         $bin=APP_DIR_NGINX.'\\'.$ver.'\\nginx.exe';
-        if(!is_file($bin) || !is_dir(SITES_DIR)){
+        if(!is_file($bin) || !is_dir(APP_DIR_SITES)){
             if($install) self::install_nginx($ver);
             if(!is_file($bin)) return null;
         }
@@ -527,7 +539,7 @@ class Manager{
             if($n=='SSLPort') $data.="; URL https://localhost:$v/\n";
             $data.="$n=$v\n";
         }
-        return file_put_contents(INI_FILE, $data, FILE_APPEND);
+        return file_put_contents(self::config_file(), $data, FILE_APPEND);
     }
 
     static function php_nts_list_online($reload=false){
@@ -543,7 +555,7 @@ class Manager{
     }
 
     static function php_nts_list_online_file($reload=false){
-        exec(APP_DIR_BIN.'/download_php_nts_list.bat '.($reload?1:0), $out);
+        exec(APP_DIR_BIN.'/download_php_nts_list.bat -o '.($reload?'-d':''), $out);
         if(($f=array_pop($out)) && is_file(($f))){
             $f=realpath($f);
         }
@@ -565,7 +577,6 @@ class Manager{
      * @param string|null $_php
      * @return void
      * @throws ResponseErr
-     * @throws Exception
      */
     static function addServer(?string $_dir=null, ?string $_php=null){
         $servers=self::getServer_list();
@@ -638,7 +649,6 @@ class Manager{
 
         $line=self::cli_confirm("Desea generar el conf del nuevo servidor ahora?", ['Y','N'], 'Y');
         if($line!='N'){
-            passthru('mphpcgi.bat init-servers '.$name);
             passthru('mphpcgi.bat nginx-test');
             echo "Presione [ENTER] para continuar...";
             readline();
@@ -695,7 +705,7 @@ class Manager{
      * @param string|null $default
      * @param bool $case_sensitive
      * @return string
-     * @throws Exception
+     * @throws ResponseErr
      */
     static function cli_confirm(string $msg, array|callable|null $filtro, ?string $default='', bool $case_sensitive=false){
         if(is_array($filtro) && !count($filtro)) $filtro=null;
@@ -777,7 +787,6 @@ class Manager{
      * @param string|null $n
      * @return void
      * @throws ResponseErr
-     * @throws Exception
      */
     static function initServers(?string $n=null){
         $servers=self::getServer_list();
@@ -803,7 +812,7 @@ class Manager{
      * @throws ResponseErr
      */
     private static function initServer(string $name, array $server, bool $replace=false){
-        $dest=SITES_DIR.'/'.$name.'.conf';
+        $dest=APP_DIR_SITES.'/'.$name.'.conf';
         if((file_exists($dest) && filesize($dest)>0) && !$replace) return false;
         $tpl=file_get_contents(APP_DIR_INC.'/newserver.conf');
         if(!$tpl) throw new ResponseErr('newserver.conf no encontrado');
@@ -838,13 +847,14 @@ class Manager{
     /**
      * @return array Lista de PIDs
      * @throws ResponseErr
-     * @throws Exception
      */
     static function service_start(){
         self::service_stop();
-        $nginx=self::nginx_bin(null, true);
-        if(!$nginx) throw new ResponseErr('NGINX no encontrado');
+        $ver=self::getNginxVer();
+        $nginx=self::nginx_bin($ver, true);
+        if(!$nginx) throw new ResponseErr("NGINX $ver no encontrado");
         $cli=EasyCLI::newCleanEnv('', ROOT_DIR);
+        shell_exec('mphpcgi.bat init-servers');
         $servers=self::getServer_list();
         $cmds=[];
         foreach($servers as $name=>$server){
@@ -866,7 +876,7 @@ class Manager{
             'hidec',
             $nginx,
             '-p',
-            APP_DIR_CONFIG.'\\nginx',
+            APP_DIR_USR.'\\conf-nginx-'.$ver,
         ];
         $pids=[];
         $fail=false;
@@ -891,13 +901,15 @@ class Manager{
      * @throws ResponseErr
      */
     static function nginx_test(){
-        $nginx=self::nginx_bin(null, true);
+        $ver=self::getNginxVer();
+        $nginx=self::nginx_bin($ver, true);
         if(!$nginx) throw new ResponseErr('NGINX no instalado');
+        shell_exec('mphpcgi.bat init-servers');
         $cmd=[
             $nginx,
             '-t',
             '-p',
-            APP_DIR_CONFIG.'\\nginx',
+            APP_DIR_USR.'\\conf-nginx-'.$ver,
         ];
         $procNginx=EasyCLI::newCleanEnv($cmd, ROOT_DIR)->open();
         if(!$procNginx) return false;
@@ -913,8 +925,11 @@ class Manager{
      */
     static function nginx_log_clear(){
         $fail='';
-        if(!unlink($file=NGINX_LOG_DIR.'/access.log')) $fail.="Fail: $file\n";
-        if(!unlink($file=NGINX_LOG_DIR.'/error.log')) $fail.="Fail: $file\n";
+        $list=glob(APP_DIR_USR.'\\conf-nginx-*\\logs\\*.log');
+        foreach($list as $file){
+            if(!unlink($file)) $fail.="Fail: $file\n";
+            else echo "Clear: ".$file."\n";
+        }
         if($fail){
             throw new ResponseErr($fail);
         }
@@ -932,7 +947,7 @@ class Manager{
         return strstr($res, 'SUCCESS')!==false;
     }
 
-    static function portListening(int $port){
+    static function portCheck(int $port){
         exec('netstat -ano | find ":'.$port.' " | find "LISTEN"', $out);
         $out=array_map(function($v){
             preg_match_all('/\s*([^\s]+)(\s|$)/', trim($v), $m);

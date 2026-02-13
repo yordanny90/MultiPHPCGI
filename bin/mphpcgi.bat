@@ -1,7 +1,7 @@
 @echo off
 setlocal
-if "%1"=="service-start" (
-    if not exist "%~dp0..\conf\ssl\localhost.crt" (
+if "%~1"=="service-start" (
+    if not exist "%~dp0..\usr\ssl\localhost.crt" (
         start /WAIT cmd /c call "%~dp0cert_generate.bat"
     )
 )

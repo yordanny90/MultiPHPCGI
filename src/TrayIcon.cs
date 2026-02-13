@@ -39,7 +39,7 @@ public class TrayIcon
         this.contextMenu.Items.Add(new ToolStripSeparator());
         this.contextMenu.Items.Add(this.phpMenu);
         this.contextMenu.Items.Add(new ToolStripSeparator());
-        AddMenuCmd("config.ini", Path.Combine(this.dir, "inc", "config.ini"), "", GetShellIcon(269));
+        AddMenuCmd("config.ini", Path.Combine(this.dir, "usr", "config.ini"), "", GetShellIcon(269));
         this.contextMenu.Items.Add(this.serverMenu);
         this.contextMenu.Items.Add(new ToolStripSeparator());
         AddMenuCmd("Iniciar Servicios", Path.Combine(this.dir, "service-start.bat"), "", GetShellIcon(137));
@@ -95,7 +95,7 @@ public class TrayIcon
     {
         ToolStripMenuItem submenu=this.serverMenu;
         submenu.DropDownItems.Clear();
-        string carpeta=Path.Combine(this.dir, "conf", "nginx", "conf", "sites-enabled");
+        string carpeta=Path.Combine(this.dir, "usr", "servers");
 
         ToolStripMenuItem btn = new ToolStripMenuItem("Explorar", GetShellIcon(3));
         btn.Click += (s, args) => ExecuteCmd("explorer", carpeta);
@@ -121,8 +121,8 @@ public class TrayIcon
         btn = new ToolStripMenuItem("Agregar Servidor", GetShellIcon(296));
         btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "mphpcgi.bat"), "add-server");
         submenu.DropDownItems.Add(btn);
-        btn = new ToolStripMenuItem("Regenerar .conf", GetShellIcon(238));
-        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "mphpcgi.bat"), "init-servers");
+        btn = new ToolStripMenuItem("Test NGINX", GetShellIcon(238));
+        btn.Click += (s, args) => ExecuteCmd("cmd", "/C "+Path.Combine(this.dir, "bin", "mphpcgi.bat")+" nginx-test & pause");
         submenu.DropDownItems.Add(btn);
     }
 

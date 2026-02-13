@@ -1,7 +1,7 @@
 @echo off
 setlocal
 call "%~dp0_load.bat"
-set "php_ver=%1"
+set "php_ver=%~1"
 set ux=0
 if "%php_ver%"=="-ux" (
     set ux=1
@@ -16,45 +16,39 @@ if "%php_ver%"=="" (
 set "php_dir=%~dp0..\php\%php_ver%"
 set "php_exe=%php_dir%\php.exe"
 set "_tmp=%~dp0..\tmp"
+if not exist "%_tmp%" (
+	@mkdir "%_tmp%"
+)
 
 echo Instalacion de PHP version %php_ver%
 if not exist "%php_exe%" ( goto install )
-if "%2"=="rebuild" ( goto rebuild )
+if "%~2"=="rebuild" ( goto rebuild )
 if not exist "%php_dir%\php.ini" ( goto rebuild )
 echo La instalacion ya existe.
 if %ux%==1 ( pause )
 exit /b 0
 
 :install
-set "tmp_php_list=%~dp0..\tmp\php_nts-%php_ver%.txt"
 echo Buscando PHP %php_ver%...
-FOR /F "usebackq delims=" %%a IN (`call "%~dp0download_php_nts_list.bat" 0`) DO (
-    SET "f=%%a"
-    GOTO :done
+set php_url=
+for /F "usebackq delims=" %%a IN (`call "%~dp0download_php_nts_list.bat" -v ^| findstr "php-%php_ver%-"`) do (
+    SET "php_url=%%a"
+    goto done
 )
 :done
-type %f% | findstr "php-%php_ver%-" > "%tmp_php_list%"
-if %ERRORLEVEL% neq 0 (
-    echo Error: PHP no encontrado
-    if %ux%==1 ( pause )
-    exit /b %ERRORLEVEL%
-)
-
-set /p php_url=< "%tmp_php_list%"
 for /f %%a in ('call curl -I -s -w "%%{http_code}" "%%php_url%%"') do (
-	if "%%a"=="200" ( goto found )
+	if "%%a"=="200" (
+	    goto found
+	)
 )
-echo Error: Version de PHP invalida.
+echo Error: Version de PHP no encontrada. >&2
 if %ux%==1 ( pause )
 exit /b 1
 
 :found
 echo Encontrado!
-if not exist "%_tmp%" (
-	@mkdir "%_tmp%"
-)
+echo Descargando: %php_url%
 set "zipfile=php-%php_ver%-nts.zip"
-echo Descargando %php_url%
 call curl -s -o "%_tmp%\%zipfile%" "%php_url%"
 if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo descargar el archivo.

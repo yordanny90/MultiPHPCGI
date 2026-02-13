@@ -1,11 +1,11 @@
 @echo off
 setlocal
 call "%~dp0_load.bat"
-set "nginx_ver=%1"
+set "nginx_ver=%~1"
 set "nginx_dir=%~dp0..\nginx\%nginx_ver%"
 set "nginx_exe=%nginx_dir%\nginx.exe"
 set "_tmp=%~dp0..\tmp"
-set "nginx_conf=%~dp0..\conf\nginx"
+set "nginx_conf=%~dp0..\usr\conf-nginx-%nginx_ver%"
 set "nginx_inc=%~dp0..\inc\nginx"
 if "%nginx_ver%"=="" (
 	echo Debe indicar una version de NGINX para instalar.
@@ -18,52 +18,61 @@ if exist "%nginx_exe%" (
 	goto copy_conf
 )
 
-set "url=https://nginx.org/download/"
-set "nginxbase=%nginx_ver:~0,2%"
-if "%nginxbase%"=="1." (
-	set /p name=<(echo nginx-%nginx_ver%)
-	set "name=nginx-%nginx_ver%"
-	set "zipfile=%name%.zip"
-	echo %url%%name%
-	for /f %%a in ('curl -I -s -w "%%{http_code}" "%%url%%%%zipfile%%"') do if "%%a"=="200" (goto found)
-	set "name="
-) else (
-	echo Error: Version de NGINX invalida.
-	exit /b 1
+:install
+echo Buscando NGINX %nginx_ver%...
+set nginx_url=
+set "name=nginx-%nginx_ver%"
+for /F "usebackq delims=" %%a IN (`call "%~dp0download_nginx_list.bat" -v ^| find "/%name%.zip"`) do (
+    SET "nginx_url=%%a"
+    goto done
 )
-:found
-if "%name%"=="" (
-	echo Error: Version de NGINX no encontrada.
-	exit /b 2
+set "name=freenginx-%nginx_ver%"
+for /F "usebackq delims=" %%a IN (`call "%~dp0download_nginx_list.bat" -v ^| find "/%name%.zip"`) do (
+    SET "nginx_url=%%a"
+    goto done
 )
+:done
+for /f %%a in ('call curl -I -s -w "%%{http_code}" "%%nginx_url%%"') do (
+	if "%%a"=="200" (
+	    goto found
+	)
+)
+echo Error: Version de NGINX no encontrada. >&2
+exit /b 1
 
+:found
+echo Encontrado!
+echo Descargando: %nginx_url%
 rmdir /s /q "%_tmp%\%name%\"
 @mkdir "%_tmp%\%name%\"
-curl -s -o "%_tmp%\%name%\%zipfile%" "%url%%zipfile%"
+set "zipfile=%name%.zip"
+curl -s -o "%_tmp%\%zipfile%" "%nginx_url%"
 if %ERRORLEVEL% neq 0 (
 	echo Error: No se pudo descargar el archivo.
 	exit /b %ERRORLEVEL%
 )
-if not exist "%_tmp%\%name%\%zipfile%" (
+if not exist "%_tmp%\%zipfile%" (
 	rmdir /s /q "%_tmp%\%name%"
 	echo Error: No se pudo descargar el archivo.
 	exit /b 1
 )
 
 echo Descomprimiendo ZIP...
-call 7za x -y "%_tmp%\%name%\%zipfile%" "-o%_tmp%\%name%\"
+call 7za x -y "%_tmp%\%zipfile%" "-o%_tmp%\%name%\"
 if %ERRORLEVEL% neq 0 (
 	rmdir /s /q "%_tmp%\%name%"
 	echo Error: No se pudo descomprimir el archivo.
 	exit /b %ERRORLEVEL%
 )
-
-if not exist "%_tmp%\%name%\%name%\nginx.exe" (
-	rmdir /s /q "%_tmp%\%name%"
-	echo Error: Archivo de instalacion invalido.
-	exit /b 1
+del "%_tmp%\%zipfile%"
+if exist "%_tmp%\%name%\%name%\nginx.exe" (
+    goto valid_zip
 )
+rmdir /s /q "%_tmp%\%name%"
+echo Error: Archivo de instalacion invalido.
+exit /b 1
 
+:valid_zip
 if not exist "%nginx_dir%" (
 	@mkdir "%nginx_dir%"
 )
@@ -108,4 +117,4 @@ if not exist "%nginx_dir%\nginx.exe" (
 	exit /b 1
 )
 
-call init-servers
+call "%~dp0mphpcgi.bat" init-servers

@@ -4,10 +4,10 @@ echo Generando nuevo certificado...
 call "%~dp0_load.bat"
 set name=localhost
 set dir=%~dp0..\
-set "openssl=%~dp0\openssl\openssl.exe"
+set "openssl=%~dp0openssl\openssl.exe"
 set _tmp=%tmp%\mphpcgi_openssl\
 if not exist "%_tmp%" (
-	mkdir "%_tmp%"
+	@mkdir "%_tmp%"
 )
 copy "%dir%inc\ssl\openssl.conf" "%_tmp%openssl.conf"
 call "%~dp0mphpcgi.bat" get-ip-cert >> "%_tmp%openssl.conf"
@@ -47,7 +47,7 @@ if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%
 )
-set certdir=%dir%conf\ssl\
+set certdir=%dir%usr\ssl\
 @mkdir "%certdir%"
 copy /Y "%_tmp%private.key" "%certdir%%name%.key"
 del "%_tmp%private.key"

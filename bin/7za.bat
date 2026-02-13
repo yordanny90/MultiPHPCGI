@@ -1,2 +1,2 @@
 @echo off
-call "%~dp0\7za\7za.exe" %*
+call "%~dp07za\7za.exe" %*

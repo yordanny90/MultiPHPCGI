@@ -10,7 +10,7 @@ try {
 				$url + $link
 			}
 		}
-	} | findstr 'nginx\-' | findstr /V 'download/freenginx' | Sort-Object -Descending
+	} | findstr 'nginx\-'<#  | findstr /V 'download/freenginx' #> | Sort-Object -Descending
 }
 catch {
 	Write-Error "Invoke-WebRequest falló: $($_.Exception.Message)"
