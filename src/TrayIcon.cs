@@ -119,10 +119,10 @@ public class TrayIcon
         }
         submenu.DropDownItems.Add(new ToolStripSeparator());
         btn = new ToolStripMenuItem("Agregar Servidor", GetShellIcon(296));
-        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "mphpcgi.bat"), "add-server");
+        btn.Click += (s, args) => ExecuteCmd(Path.Combine(this.dir, "bin", "mphpcgi.bat"), "new_server");
         submenu.DropDownItems.Add(btn);
         btn = new ToolStripMenuItem("Test NGINX", GetShellIcon(238));
-        btn.Click += (s, args) => ExecuteCmd("cmd", "/C "+Path.Combine(this.dir, "bin", "mphpcgi.bat")+" nginx-test & pause");
+        btn.Click += (s, args) => ExecuteCmd("cmd", "/C "+Path.Combine(this.dir, "bin", "mphpcgi.bat")+" nginx_test & pause");
         submenu.DropDownItems.Add(btn);
     }
 

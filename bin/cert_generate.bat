@@ -10,7 +10,7 @@ if not exist "%_tmp%" (
 	@mkdir "%_tmp%"
 )
 copy "%dir%inc\ssl\openssl.conf" "%_tmp%openssl.conf"
-call "%~dp0mphpcgi.bat" get-ip-cert >> "%_tmp%openssl.conf"
+call "%~dp0mphpcgi.bat" get_ip_cert >> "%_tmp%openssl.conf"
 if %ERRORLEVEL% neq 0 (
 	echo Error de openssl
 	exit /b %ERRORLEVEL%

@@ -10,7 +10,7 @@ class Manager{
      * @throws ResponseErr
      */
     static function getNginxVer(){
-        $nginx=strval(static::getConfig()['nginx'] ?? '');
+        $nginx=strval(self::getConfig()['nginx'] ?? '');
         return $nginx;
     }
 
@@ -296,6 +296,18 @@ class Manager{
         return array_filter($rows);
     }
 
+    static function getProcess($name=null, $pid=null): array{
+        $eq=[];
+        if($name){
+            $eq['Name']=$name;
+        }
+        if($pid){
+            $eq['ProcessId']=$pid;
+        }
+        if(!$eq) return [];
+        return EasyCLI::windows_process_list($eq);
+    }
+
     static function getProcessMyDir($name=null, $pid=null): array{
         $eq=[];
         if($name){
@@ -309,10 +321,13 @@ class Manager{
         ]);
     }
 
-    static function getProcessNotMyDir($name=null): array{
+    static function getProcessNotMyDir($name=null, $pid=null): array{
         $eq=[];
         if($name){
             $eq['Name']=$name;
+        }
+        if($pid){
+            $eq['ProcessId']=$pid;
         }
         return EasyCLI::windows_process_list($eq, null, null, [
             'ExecutablePath'=>ROOT_DIR.'\\'
@@ -438,41 +453,46 @@ class Manager{
 
     static function php_make_bat(){
         $list=self::php_list();
-        $phpbat=function($delete=false){
-            return array_filter(array_map(function($file)use($delete){
-                if(!is_file($file)) return null;
-                $name=basename($file);
-                if(!preg_match('/^php(cgi)?\d+\.\d+(\.\d+)?\.bat$/', $name)) return null;
-                if($delete) unlink($file);
-                return $name;
-            }, glob(APP_DIR_BIN.'/php*.bat')));
-        };
-        $phpbat(1);
-        array_walk($list, function($v){
-            $bin=self::phpcgi_bin($v);
-            if($bin){
-                file_put_contents(APP_DIR_BIN.'\\phpcgi'.$v.'.bat', "@echo off\n\"%~dp0..\php\\$v\\".basename($bin)."\" %*\n");
+        $created=[];
+        array_walk($list, function($v)use(&$created){
+            $version=$v;
+            $envs='set "OPENSSL_MODULES=%~dp0..\php\\'.$version.'\extras\ssl"
+set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
+            if($bin=self::phpcgi_bin($version)){
+                $created[]=$bat='php-cgi'.$v.'.bat';
+                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n$envs\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
             }
-            $bin=self::php_bin($v);
-            if($bin){
-                file_put_contents(APP_DIR_BIN.'\\php'.$v.'.bat', "@echo off\n\"%~dp0..\php\\$v\\".basename($bin)."\" %*\n");
+            if($bin=self::php_bin($version)){
+                $created[]=$bat='php'.$v.'.bat';
+                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n$envs\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
             }
             return;
         });
         $list_simple=self::php_version_simple_list($list);
-        array_walk($list_simple, function($v)use($list){
+        array_walk($list_simple, function($v)use($list, &$created){
             $version=self::php_version_full($v, $list);
-            $bin=self::phpcgi_bin($version);
-            if($bin){
-                file_put_contents(APP_DIR_BIN.'\\phpcgi'.$v.'.bat', "@echo off\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
+            $batfull="php-cgi$version.bat";
+            if(in_array($batfull, $created)){
+                $created[]=$bat='php-cgi'.$v.'.bat';
+                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n\"%~dp0$batfull\" %*\n");
             }
-            $bin=self::php_bin($version);
-            if($bin){
-                file_put_contents(APP_DIR_BIN.'\\php'.$v.'.bat', "@echo off\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
+            $batfull="php$version.bat";
+            if(in_array($batfull, $created)){
+                $created[]=$bat='php'.$v.'.bat';
+                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n\"%~dp0$batfull\" %*\n");
             }
             return;
         });
-        return $phpbat();
+        return array_filter(array_map(function($file)use($created){
+            if(!is_file($file)) return null;
+            $name=basename($file);
+            if(!preg_match('/^php(\-cgi)?\d+\.\d+(\.\d+)?\.bat$/', $name)) return null;
+            if(!in_array($name, $created)){
+                unlink($file);
+                return null;
+            }
+            return $name;
+        }, glob(APP_DIR_BIN.'/php*.bat')));
     }
 
     /**
@@ -502,7 +522,7 @@ class Manager{
      * @return int
      * @throws ResponseErr
      */
-    static function service_stop(){
+    static function stop(){
         $list=self::getProcessMyDir([
             'php-cgi.exe',
             'php-cgi-spawner.exe',
@@ -515,18 +535,22 @@ class Manager{
         return count($list);
     }
 
+    /**
+     * @throws ResponseErr
+     */
     static function php_stop(){
         $list=self::getProcessMyDir([
             'php.exe',
             'php-win.exe'
         ]);
-        if(count($list)==0) return true;
-        $mypid=getmypid();
-        $list=array_column(array_filter($list, function($row) use ($mypid){
-            return $row['ProcessId']!=$mypid && (strstr($row['CommandLine'], ROOT_DIR)!==false);
-        }), 'ProcessId');
-        if(!self::taskkill(...$list)) return false;
-        return true;
+        if(count($list)>0){
+            $mypid=getmypid();
+            $list=array_column(array_filter($list, function($row) use ($mypid){
+                return $row['ProcessId']!=$mypid && (strstr($row['CommandLine'], ROOT_DIR)!==false);
+            }), 'ProcessId');
+            if(!self::taskkill(...$list)) throw new ResponseErr('Fallo al detener los procesos');
+        }
+        return count($list);
     }
 
     static function addServer_conf(string $name, array $server){
@@ -555,7 +579,7 @@ class Manager{
     }
 
     static function php_nts_list_online_file($reload=false){
-        exec(APP_DIR_BIN.'/download_php_nts_list.bat '.($reload?'-f':''), $out);
+        exec('"'.APP_DIR_BIN.'/download_php_nts_list.bat" '.($reload?'-f':''), $out);
         if(($f=array_pop($out)) && is_file(($f))){
             $f=realpath($f);
         }
@@ -597,7 +621,7 @@ class Manager{
         ];
         if($server['Root'] && !is_dir($server['Root'])) $server['Root']=null;
         self::cli_autocomplete_filesystem(GLOB_ONLYDIR);
-        $line=self::cli_confirm("Ingresa la dirección de Root (carpeta existente)", 'is_dir', $server['Root']);
+        $line=self::cli_confirm("Ingresa la dirección de Root (carpeta existente)\n", 'is_dir', $server['Root']);
         $server['Root']=realpath($line);
         echo "Ruta seleccionada: ".$server['Root']."\n\n";
 
@@ -630,7 +654,7 @@ class Manager{
         }
         $name.=$suf;
         self::cli_autocomplete([self::PREFIX_SERVER_NAME,$name]);
-        $line=self::cli_confirm("Ingrese un nombre (alfanumérico sin espacios) para el nuevo servidor. Sugerido: [".$name."]", function($v)use(&$server_list){
+        $line=self::cli_confirm("Ingrese un nombre (alfanumérico sin espacios) para el nuevo servidor. Sugerido: [".$name."]\n", function($v)use(&$server_list){
             if(!preg_match(self::PREG_SERVER_NAME, $v)){
                 echo "* Formato inválido\n\n";
                 return false;
@@ -649,7 +673,7 @@ class Manager{
 
         $line=self::cli_confirm("Desea generar el conf del nuevo servidor ahora?", ['Y','N'], 'Y');
         if($line!='N'){
-            passthru('mphpcgi.bat nginx-test');
+            passthru('mphpcgi.bat nginx_test');
             echo "Presione [ENTER] para continuar...";
             readline();
         }
@@ -677,10 +701,7 @@ class Manager{
         }
         elseif($case_sensitive){
             $fn=function($v)use(&$list){
-                $matches=[];
-                foreach($list as $val){
-                    if(stripos($val, $v)===0) $matches[]=$val;
-                }
+                $matches=array_filter($list, function($val)use($v){return stripos($val, $v)===0;});
                 if(!count($matches)) $matches[] = '';
                 return $matches;
             };
@@ -688,10 +709,7 @@ class Manager{
         else{
             $fn=function($v)use(&$list){
                 $v=strtoupper($v);
-                $matches=[];
-                foreach($list as $val){
-                    if(stripos(strtoupper($val), $v)===0) $matches[]=$val;
-                }
+                $matches=array_filter($list, function($val)use($v){return stripos(strtoupper($val), $v)===0;});
                 if(!count($matches)) $matches[] = '';
                 return $matches;
             };
@@ -711,6 +729,7 @@ class Manager{
         if(is_array($filtro) && !count($filtro)) $filtro=null;
         if(!is_array($filtro)) $case_sensitive=true;
         $default=$default ?? '';
+        $end='';
         if(is_array($filtro)){
             $max=5;
             if(!$case_sensitive) $filtro=array_map('strtoupper', $filtro);
@@ -718,8 +737,13 @@ class Manager{
             if(count($filtro)<=$max) $msg.=" (".implode('/', $filtro).")";
             else $msg.=" (".implode('/', array_slice($filtro, 0, $max))." ...)";
             self::cli_autocomplete($filtro, $case_sensitive);
+            $end="\n";
         }
-        $msg.=" ".($default!==''?"[$default]":'')."\n";
+        if($default!==''){
+            $msg.=" [$default]";
+            $end="\n";
+        }
+        $msg.=$end;
         do{
             echo $msg;
             $line=trim(readline());
@@ -729,6 +753,9 @@ class Manager{
             }
             elseif(is_callable($filtro)){
                 if($filtro($line)) break;
+            }
+            else{
+                break;
             }
             if($default!=='' && $line===''){
                 $line=$default;
@@ -742,66 +769,26 @@ class Manager{
     }
 
     /**
-     * @param $n
-     * @return void
-     */
-    static function process_list($n=null){
-        $names=[
-            '*',
-            'nginx.exe',
-            'php-cgi-spawner.exe',
-            'php-cgi.exe',
-            'php.exe',
-            'MultiPHPCGI.exe',
-        ];
-        $array2ini=function($name, $data)use(&$array2ini){
-            if(is_object($data) || is_array($data)){
-                echo "\n[$name]\n";
-                foreach($data as $n=>$v){
-                    $array2ini($n, $v);
-                }
-                return;
-            }
-            echo "  $name=$data\n";
-        };
-        if(is_numeric($n)) $n=$names[$n]??'';
-        if($n=='*'){
-            foreach(Manager::getProcessMyDir(null) as $p){
-                $array2ini($p['Name'], $p);
-            }
-        }
-        elseif(is_string($n) && $n!==''){
-            foreach(Manager::getProcessMyDir($n) as $p){
-                $array2ini($p['Name'], $p);
-            }
-        }
-        else{
-            echo "Opciones:\n";
-            foreach($names as $k=>$name){
-                echo "\t[".$k."] ".$name."\n";
-            }
-        }
-    }
-
-    /**
      * @param string|null $n
-     * @return void
+     * @return array
      * @throws ResponseErr
      */
     static function initServers(?string $n=null){
         $servers=self::getServer_list();
+        $list=[];
         if($n!==null){
             $name=$n;
             if(isset($servers[$name])){
                 $saved=self::initServer($name, $servers[$name], true);
-                if($saved) echo $name."\n";
+                if($saved) $list[]=$name;
             }
-            return;
+            return $list;
         }
         foreach($servers AS $name=>$server){
             $saved=self::initServer($name, $server);
-            if($saved) echo $name."\n";
+            if($saved) $list[]=$name;
         }
+        return $list;
     }
 
     /**
@@ -848,13 +835,14 @@ class Manager{
      * @return array Lista de PIDs
      * @throws ResponseErr
      */
-    static function service_start(){
-        self::service_stop();
+    static function start(){
+        self::stop();
         $ver=self::getNginxVer();
         $nginx=self::nginx_bin($ver, true);
         if(!$nginx) throw new ResponseErr("NGINX $ver no encontrado");
         $cli=EasyCLI::newCleanEnv('', ROOT_DIR);
-        shell_exec('mphpcgi.bat init-servers');
+        self::initServers();
+        self::php_make_bat();
         $servers=self::getServer_list();
         $cmds=[];
         foreach($servers as $name=>$server){
@@ -865,15 +853,15 @@ class Manager{
             $maxProc=$server['CGIMaxProc'] ?? 8;
             if(!is_numeric($maxProc)) throw new ResponseErr('['.$name.'] CGIMaxProc inválido: '.$maxProc);
             $cmds[$name]=[
-                'hidec',
-                'php-cgi-spawner',
-                $phpbin.' -d opcache.cache_id=mphpcgi-'.$name,
+                APP_DIR_BIN.'\hidec.exe',
+                APP_DIR_BIN.'\php-cgi-spawner.exe',
+                'php-cgi'.$server['PHP'].'.bat -d opcache.cache_id=mphp-cgi-'.$name,
                 $cgiport,
                 '0+'.$maxProc,
             ];
         }
         $cmds['nginx']=[
-            'hidec',
+            APP_DIR_BIN.'\hidec.exe',
             $nginx,
             '-p',
             APP_DIR_USR.'\\conf-nginx-'.$ver,
@@ -904,35 +892,17 @@ class Manager{
         $ver=self::getNginxVer();
         $nginx=self::nginx_bin($ver, true);
         if(!$nginx) throw new ResponseErr('NGINX no instalado');
-        shell_exec('mphpcgi.bat init-servers');
+        self::initServers();
         $cmd=[
             $nginx,
             '-t',
             '-p',
             APP_DIR_USR.'\\conf-nginx-'.$ver,
         ];
-        $procNginx=EasyCLI::newCleanEnv($cmd, ROOT_DIR)->open();
-        if(!$procNginx) return false;
-        if($procNginx->await()) $procNginx->terminate();
-        $procNginx->out_passthru();
-        $procNginx->err_passthru();
+        $cmd=EasyCLI::command_args(...$cmd);
+        $res=passthru($cmd);
+        if($res===false) throw new ResponseErr('');
         return true;
-    }
-
-    /**
-     * @return void
-     * @throws ResponseErr
-     */
-    static function nginx_log_clear(){
-        $fail='';
-        $list=glob(APP_DIR_USR.'\\conf-nginx-*\\logs\\*.log');
-        foreach($list as $file){
-            if(!unlink($file)) $fail.="Fail: $file\n";
-            else echo "Clear: ".$file."\n";
-        }
-        if($fail){
-            throw new ResponseErr($fail);
-        }
     }
 
     static function taskkill(...$pid){
@@ -948,11 +918,18 @@ class Manager{
     }
 
     static function portCheck(int $port){
-        exec('netstat -ano | find ":'.$port.' " | find "LISTEN"', $out);
-        $out=array_map(function($v){
+        exec('netstat -ano | find "LISTEN" | find ":'.$port.' "', $out);
+        $out=array_filter(array_map(function($v)use($port){
             preg_match_all('/\s*([^\s]+)(\s|$)/', trim($v), $m);
-            return array_combine(['Proto', 'Local Address', 'Foreign Address', 'State', 'PID'], $m[1]);
-        }, $out);
+            $data=array_combine(['Proto', 'Local', 'Foreign', 'State', 'PID'], $m[1]);
+            if(preg_match('/^(.*):(\d+)$/', $data['Local'], $m)){
+                $data['LocalIP']=$m[1];
+                $data['LocalPort']=$m[2];
+            }
+            if($data['LocalPort']!=$port) return null;
+            unset($data['Foreign']);
+            return $data;
+        }, $out));
         return $out;
     }
 }

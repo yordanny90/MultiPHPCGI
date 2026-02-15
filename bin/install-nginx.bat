@@ -117,4 +117,4 @@ if not exist "%nginx_dir%\nginx.exe" (
 	exit /b 1
 )
 
-call "%~dp0mphpcgi.bat" init-servers
+call "%~dp0mphpcgi.bat" make_servers

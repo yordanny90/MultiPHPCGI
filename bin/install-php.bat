@@ -9,7 +9,7 @@ if "%php_ver%"=="-ux" (
 	set /P "php_ver=Ingrese una version de PHP: "
 )
 if "%php_ver%"=="" (
-	echo Debe indicar una version de PHP para instalar.
+	echo Debe indicar una version de PHP para instalar>&2
 	if %ux%==1 ( pause )
 	exit /b 1
 )
@@ -24,7 +24,7 @@ echo Instalacion de PHP version %php_ver%
 if not exist "%php_exe%" ( goto install )
 if "%~2"=="rebuild" ( goto rebuild )
 if not exist "%php_dir%\php.ini" ( goto rebuild )
-echo La instalacion ya existe.
+echo La instalacion ya existe
 if %ux%==1 ( pause )
 exit /b 0
 
@@ -41,7 +41,7 @@ for /f %%a in ('call curl -I -s -w "%%{http_code}" "%%php_url%%"') do (
 	    goto found
 	)
 )
-echo Error: Version de PHP no encontrada. >&2
+echo Error: Version de PHP no encontrada>&2
 if %ux%==1 ( pause )
 exit /b 1
 
@@ -51,13 +51,13 @@ echo Descargando: %php_url%
 set "zipfile=php-%php_ver%-nts.zip"
 call curl -s -o "%_tmp%\%zipfile%" "%php_url%"
 if %ERRORLEVEL% neq 0 (
-	echo Error: No se pudo descargar el archivo.
+	echo Error: No se pudo descargar el archivo>&2
 	if %ux%==1 ( pause )
 	exit /b %ERRORLEVEL%
 )
 
 if not exist "%_tmp%\%zipfile%" (
-	echo Error: No se pudo guardar el archivo.
+	echo Error: No se pudo guardar el archivo>&2
 	if %ux%==1 ( pause )
 	exit /b 1
 )
@@ -68,7 +68,7 @@ echo Descomprimiendo ZIP...
 call 7za x -y "%_tmp%\%zipfile%" "-o%php_dir%"
 if %ERRORLEVEL% neq 0 (
 	del "%_tmp%\%zipfile%"
-	echo Error: No se pudo descomprimir el archivo.
+	echo Error: No se pudo descomprimir el archivo>&2
 	if %ux%==1 ( pause )
 	exit /b %ERRORLEVEL%
 )
@@ -77,7 +77,7 @@ echo Eliminando archivo ZIP...
 del "%_tmp%\%zipfile%"
 
 if not exist "%php_dir%\php.exe" (
-	echo Error: No se pudo completar la instalacion.
+	echo Error: No se pudo completar la instalacion>&2
 	if %ux%==1 ( pause )
 	exit /b 1
 )
@@ -91,7 +91,7 @@ if %ERRORLEVEL% neq 0 (
 echo PHP %php_ver% instalado correctamente!
 if %ux%==1 ( pause )
 echo Generando archivos:
-call "%~dp0mphpcgi.bat" php-bat
+call "%~dp0mphpcgi.bat" php_bat
 echo.
 if %ux%==1 ( pause )
 
