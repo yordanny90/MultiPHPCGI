@@ -49,7 +49,7 @@ if %ERRORLEVEL% neq 0 (
 	exit /b %ERRORLEVEL%
 )
 del "%ini_tmp%"
-set "extensions=opcache,sodium,ffi,bz2,intl,ldap,ftp,gd,gd2,gettext,curl,fileinfo,gmp,imap,mbstring,exif,openssl,mysqli,odbc,pgsql,pdo_mysql,pdo_odbc,pdo_pgsql,pdo_sqlite,sqlite3,soap,sockets,tidy,xsl,zip,shmop,xmlrpc"
+set "extensions=opcache,sodium,ffi,bz2,intl,ldap,ftp,gd,gd2,gettext,curl,fileinfo,gmp,imap,mbstring,exif,openssl,mysqli,odbc,pgsql,pdo_mysql,pdo_odbc,pdo_pgsql,pdo_sqlite,sqlite3,soap,sockets,tidy,xsl,zip,shmop,xmlrpc,xdebug"
 set Habilitando extensiones: %extensions%
 for %%e in (%extensions%) do (
     call "%~dp0extphp-isnul.bat" "%php_ini%" "%%~e"2>nul
