@@ -1,29 +1,11 @@
 <?php
-if(php_sapi_name()!=='cli') return;
 
+use MultiPHPCGI\Manager;
+use MultiPHPCGI\ResponseErr;
+
+if(php_sapi_name()!=='cli') return;
 error_reporting(E_COMPILE_ERROR | E_RECOVERABLE_ERROR | E_ERROR | E_CORE_ERROR);
-require_once __DIR__.'\.lib\__autoload.php';
-ini_set('display_errors', 0);
-define('ORIGINAL_DIR', getcwd());
-define('ROOT_DIR', dirname(__DIR__, 2));
-ini_set('error_log', ROOT_DIR.'\tmp\php_error.log');
-define('APP_DIR_BIN', ROOT_DIR.'\bin');
-define('APP_DIR_PHP', ROOT_DIR.'\php');
-define('APP_DIR_NGINX', ROOT_DIR.'\nginx');
-define('APP_DIR_USR', ROOT_DIR.'\usr');
-define('APP_DIR_SITES', APP_DIR_USR.'\servers');
-define('APP_DIR_INC', ROOT_DIR.'\inc');
-define('APP_VER', '1.3.2');
-define('_DEF', "\033[0m");
-define('_RED', "\033[31m");
-define('_GREEN', "\033[32m");
-define('_YELL', "\033[33m");
-define('_BLUE', "\033[34m");
-define('_PURP', "\033[35m");
-define('_AQUA', "\033[36m");
-define('_GREY', "\033[37m");
-define('_BGRED', "\033[41m");
-define('_BGYEL', "\033[43m");
+require_once __DIR__.'/__use.php';
 
 $cli=new class{
     public $interative=false;
@@ -56,7 +38,7 @@ $cli=new class{
                 continue;
             }
         }
-        if($o!==null){
+        if($o!==null && isset($p)){
             $data[$o]=$p;
         }
         return $data;

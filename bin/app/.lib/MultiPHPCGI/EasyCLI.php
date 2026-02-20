@@ -1,5 +1,6 @@
 <?php
 
+namespace MultiPHPCGI;
 /**
  * @class EasyCLI
  */
@@ -81,18 +82,18 @@ class EasyCLI{
 
     /**
      * @param null|string|resource|array $outBuffer Dirección del archivo de salida (borra el contenido del archivo).<br>
-     * Si es "temp", crea un recurso temporal. No se puede usar {@see EasyCLI\Proc::getOutfile()}<br>
-     * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see EasyCLI\Proc::getOutfile()}<br>
-     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see EasyCLI\Proc::getOutfile()}<br>
+     * Si es "temp", crea un recurso temporal. No se puede usar {@see \MultiPHPCGI\EasyCLI\Proc::getOutfile()}<br>
+     * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see \MultiPHPCGI\EasyCLI\Proc::getOutfile()}<br>
+     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see \MultiPHPCGI\EasyCLI\Proc::getOutfile()}<br>
      * Si es un array, lo usa como $descriptor_spec para {@see proc_open()}, ejemplo: ["file", "php://temp", "w+"]<br>
      * Cualquier otro dato, no se crea la tubería
      * @param null|string|resource|array $errBuffer Dirección del archivo de errores (borra el contenido del archivo).<br>
-     * Si es "temp", crea un recurso temporal. No se puede usar {@see EasyCLI\Proc::getErrfile()}<br>
-     * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see EasyCLI\Proc::getErrfile()}<br>
-     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see EasyCLI\Proc::getErrfile()}<br>
+     * Si es "temp", crea un recurso temporal. No se puede usar {@see \MultiPHPCGI\EasyCLI\Proc::getErrfile()}<br>
+     * Si es "pipe", crea una tubería sin archivo. No se puede usar {@see \MultiPHPCGI\EasyCLI\Proc::getErrfile()}<br>
+     * Si es un recurso, crea una tubería que escribe en ese recurso. No se puede usar {@see \MultiPHPCGI\EasyCLI\Proc::getErrfile()}<br>
      * Si es un array, lo usa como $descriptor_spec para {@see proc_open()}, ejemplo: ["file", "php://temp", "w+"]<br>
      * Cualquier otro dato, no se crea la tubería
-     * @return EasyCLI\Proc|null
+     * @return \MultiPHPCGI\EasyCLI\Proc|null
      */
     public function open($outBuffer='pipe', $errBuffer='pipe'){
         $desc_spec=[];

@@ -1,5 +1,7 @@
 <?php
 
+namespace MultiPHPCGI;
+
 class Manager{
 
     const PREFIX_SERVER_NAME='server.';
@@ -387,7 +389,10 @@ class Manager{
     }
 
     static function php_version_simple_list(array $list_versiones){
-        return array_unique(array_filter(array_map([self::class, 'php_version_simple'], $list_versiones)));
+        return array_unique(array_filter(array_map([
+            self::class,
+            'php_version_simple'
+        ], $list_versiones)));
     }
 
     /**
@@ -454,7 +459,7 @@ class Manager{
     static function php_make_bat(){
         $list=self::php_list();
         $created=[];
-        array_walk($list, function($v)use(&$created){
+        array_walk($list, function($v) use (&$created){
             $version=$v;
             $envs='set "OPENSSL_MODULES=%~dp0..\php\\'.$version.'\extras\ssl"
 set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
@@ -469,7 +474,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             return;
         });
         $list_simple=self::php_version_simple_list($list);
-        array_walk($list_simple, function($v)use($list, &$created){
+        array_walk($list_simple, function($v) use ($list, &$created){
             $version=self::php_version_full($v, $list);
             $batfull="php-cgi$version.bat";
             if(in_array($batfull, $created)){
@@ -483,7 +488,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             }
             return;
         });
-        return array_filter(array_map(function($file)use($created){
+        return array_filter(array_map(function($file) use ($created){
             if(!is_file($file)) return null;
             $name=basename($file);
             if(!preg_match('/^php(\-cgi)?\d+\.\d+(\.\d+)?\.bat$/', $name)) return null;
@@ -556,7 +561,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
     static function addServer_conf(string $name, array $server){
         if(!preg_match(self::PREG_SERVER_NAME, $name)) return false;
         $data="\n[".$name."]\n";
-        foreach($server As $n=>$v){
+        foreach($server as $n=>$v){
             if($n=='Root') $data.="; Raíz del servidor\n";
             if($n=='CGIMaxProc') $data.="; Procesos máximos de PHP-CGI\n";
             if($n=='Port') $data.="; URL http://localhost:$v/\n";
@@ -630,11 +635,17 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
         }
         $server['Root']=str_replace('\\', '/', $server['Root']);
 
-        $line=self::cli_confirm("PHP versión ".$server['PHP']."\nDesea cambiar la versión de PHP?", ['Y','N'], 'Y');
+        $line=self::cli_confirm("PHP versión ".$server['PHP']."\nDesea cambiar la versión de PHP?", [
+            'Y',
+            'N'
+        ], 'Y');
         if($line=='Y'){
             $list=self::php_nts_list_online(true);
             $list_simple=self::php_version_simple_list($list);
-            $line=self::cli_confirm("Ingrese la versión de PHP:", [...$list_simple, ...$list], $server['PHP']);
+            $line=self::cli_confirm("Ingrese la versión de PHP:", [
+                ...$list_simple,
+                ...$list
+            ], $server['PHP']);
             $server['PHP']=$line;
             if(!in_array($line, $list)){
                 $line=self::php_version_full($line, $list);
@@ -653,8 +664,11 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             $suf='('.(++$i).')';
         }
         $name.=$suf;
-        self::cli_autocomplete([self::PREFIX_SERVER_NAME,$name]);
-        $line=self::cli_confirm("Ingrese un nombre (alfanumérico sin espacios) para el nuevo servidor. Sugerido: [".$name."]\n", function($v)use(&$server_list){
+        self::cli_autocomplete([
+            self::PREFIX_SERVER_NAME,
+            $name
+        ]);
+        $line=self::cli_confirm("Ingrese un nombre (alfanumérico sin espacios) para el nuevo servidor. Sugerido: [".$name."]\n", function($v) use (&$server_list){
             if(!preg_match(self::PREG_SERVER_NAME, $v)){
                 echo "* Formato inválido\n\n";
                 return false;
@@ -667,11 +681,17 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
         });
         $name=$line;
         print_r($server);
-        $line=self::cli_confirm("Desea guardar el nuevo servidor como [".$name."]?", ['Y','N'], 'Y');
+        $line=self::cli_confirm("Desea guardar el nuevo servidor como [".$name."]?", [
+            'Y',
+            'N'
+        ], 'Y');
         if($line=='N') return;
         self::addServer_conf($name, $server);
 
-        $line=self::cli_confirm("Desea generar el conf del nuevo servidor ahora?", ['Y','N'], 'Y');
+        $line=self::cli_confirm("Desea generar el conf del nuevo servidor ahora?", [
+            'Y',
+            'N'
+        ], 'Y');
         if($line!='N'){
             passthru('mphpcgi.bat nginx_test');
             echo "Presione [ENTER] para continuar...";
@@ -684,7 +704,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
      * @return void
      */
     static function cli_autocomplete_filesystem(int $flags=0){
-        readline_completion_function(function($v)use($flags){
+        readline_completion_function(function($v) use ($flags){
             $l=glob(($v===''?'./':$v).'*', $flags)?:[''];
             return $l;
         });
@@ -697,20 +717,20 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
      */
     static function cli_autocomplete(?array $list=null, bool $case_sensitive=true){
         if(is_null($list) || !count($list)){
-            $fn=function(){return [''];};
+            $fn=function(){ return ['']; };
         }
         elseif($case_sensitive){
-            $fn=function($v)use(&$list){
-                $matches=array_filter($list, function($val)use($v){return stripos($val, $v)===0;});
-                if(!count($matches)) $matches[] = '';
+            $fn=function($v) use (&$list){
+                $matches=array_filter($list, function($val) use ($v){ return stripos($val, $v)===0; });
+                if(!count($matches)) $matches[]='';
                 return $matches;
             };
         }
         else{
-            $fn=function($v)use(&$list){
+            $fn=function($v) use (&$list){
                 $v=strtoupper($v);
-                $matches=array_filter($list, function($val)use($v){return stripos(strtoupper($val), $v)===0;});
-                if(!count($matches)) $matches[] = '';
+                $matches=array_filter($list, function($val) use ($v){ return stripos(strtoupper($val), $v)===0; });
+                if(!count($matches)) $matches[]='';
                 return $matches;
             };
         }
@@ -784,7 +804,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             }
             return $list;
         }
-        foreach($servers AS $name=>$server){
+        foreach($servers as $name=>$server){
             $saved=self::initServer($name, $server);
             if($saved) $list[]=$name;
         }
@@ -804,8 +824,8 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
         $tpl=file_get_contents(APP_DIR_INC.'/newserver.conf');
         if(!$tpl) throw new ResponseErr('newserver.conf no encontrado');
         $replace=[
-            '{{Root}}'=>$server['Root']??null,
-            '{{CGIPort}}'=>$server['CGIPort']??null,
+            '{{Root}}'=>$server['Root'] ?? null,
+            '{{CGIPort}}'=>$server['CGIPort'] ?? null,
         ];
         if(isset($server['Port'])){
             $replace['{{Port}}']=$server['Port'];
@@ -868,7 +888,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
         ];
         $pids=[];
         $fail=false;
-        foreach($cmds As $name=>$cmd){
+        foreach($cmds as $name=>$cmd){
             $cli->set_cmd($cmd);
             $proc=$cli->open();
             if(!$proc){
@@ -919,9 +939,15 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
 
     static function portCheck(int $port){
         exec('netstat -ano | find "LISTEN" | find ":'.$port.' "', $out);
-        $out=array_filter(array_map(function($v)use($port){
+        $out=array_filter(array_map(function($v) use ($port){
             preg_match_all('/\s*([^\s]+)(\s|$)/', trim($v), $m);
-            $data=array_combine(['Proto', 'Local', 'Foreign', 'State', 'PID'], $m[1]);
+            $data=array_combine([
+                'Proto',
+                'Local',
+                'Foreign',
+                'State',
+                'PID'
+            ], $m[1]);
             if(preg_match('/^(.*):(\d+)$/', $data['Local'], $m)){
                 $data['LocalIP']=$m[1];
                 $data['LocalPort']=$m[2];

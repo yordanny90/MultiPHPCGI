@@ -1,5 +1,5 @@
 <?php
-namespace EasyCLI;
+namespace MultiPHPCGI\EasyCLI;
 
 class Proc{
     /**
