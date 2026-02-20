@@ -17,7 +17,7 @@ class Manager{
     }
 
     static function getPhpDir(){
-        list($ver, $_)=explode("\n", file_get_contents(APP_DIR_INC.'/phpdir.txt'), 2);
+        list($ver, $_)=explode("\n", file_get_contents(MPHPCGI_DIR_INC.'/phpdir.txt'), 2);
         return $ver;
     }
 
@@ -41,8 +41,8 @@ class Manager{
     }
 
     static function config_file(){
-        $file=APP_DIR_USR.'\config.ini';
-        if(!is_file($file)) copy(APP_DIR_INC.'\config.ini', $file);
+        $file=MPHPCGI_DIR_USR.'\config.ini';
+        if(!is_file($file)) copy(MPHPCGI_DIR_INC.'\config.ini', $file);
         return $file;
     }
 
@@ -319,7 +319,7 @@ class Manager{
             $eq['ProcessId']=$pid;
         }
         return EasyCLI::windows_process_list($eq, null, [
-            'ExecutablePath'=>ROOT_DIR.'\\'
+            'ExecutablePath'=>MPHPCGI_ROOT_DIR.'\\'
         ]);
     }
 
@@ -332,7 +332,7 @@ class Manager{
             $eq['ProcessId']=$pid;
         }
         return EasyCLI::windows_process_list($eq, null, null, [
-            'ExecutablePath'=>ROOT_DIR.'\\'
+            'ExecutablePath'=>MPHPCGI_ROOT_DIR.'\\'
         ]);
     }
 
@@ -408,8 +408,8 @@ class Manager{
     }
 
     static function nginx_bin(string $ver, $install=false){
-        $bin=APP_DIR_NGINX.'\\'.$ver.'\\nginx.exe';
-        if(!is_file($bin) || !is_dir(APP_DIR_SITES)){
+        $bin=MPHPCGI_DIR_NGINX.'\\'.$ver.'\\nginx.exe';
+        if(!is_file($bin) || !is_dir(MPHPCGI_DIR_SITES)){
             if($install) self::install_nginx($ver);
             if(!is_file($bin)) return null;
         }
@@ -418,7 +418,7 @@ class Manager{
 
     static function phpcgi_bin($ver=null, $install=false){
         if($ver===null) $ver=self::getPhpDir() ?? null;
-        $bin=APP_DIR_PHP.'\\'.$ver.'\\php-cgi.exe';
+        $bin=MPHPCGI_DIR_PHP.'\\'.$ver.'\\php-cgi.exe';
         if(!is_file($bin)){
             if($install) self::install_php($ver);
             if(!is_file($bin)) return null;
@@ -428,7 +428,7 @@ class Manager{
 
     static function php_bin($ver=null, $install=false){
         if($ver===null) $ver=self::getPhpDir() ?? null;
-        $bin=APP_DIR_PHP.'\\'.$ver.'\\php.exe';
+        $bin=MPHPCGI_DIR_PHP.'\\'.$ver.'\\php.exe';
         if(!is_file($bin)){
             if($install) self::install_php($ver);
             if(!is_file($bin)) return null;
@@ -438,7 +438,7 @@ class Manager{
 
     static function php_ini($ver=null){
         if($ver===null) $ver=self::getPhpDir() ?? null;
-        $bin=APP_DIR_PHP.'\\'.$ver.'\\php.ini';
+        $bin=MPHPCGI_DIR_PHP.'\\'.$ver.'\\php.ini';
         if(!is_file($bin)){
             return null;
         }
@@ -447,12 +447,12 @@ class Manager{
 
     static function php_list(){
         $list=array_filter(array_map(function($name){
-            $php_cmd=APP_DIR_PHP.'\\'.$name.'\\php.exe';
+            $php_cmd=MPHPCGI_DIR_PHP.'\\'.$name.'\\php.exe';
             if(is_file($php_cmd)){
                 return $name;
             }
             return null;
-        }, scandir(APP_DIR_PHP)));
+        }, scandir(MPHPCGI_DIR_PHP)));
         return $list;
     }
 
@@ -465,11 +465,11 @@ class Manager{
 set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             if($bin=self::phpcgi_bin($version)){
                 $created[]=$bat='php-cgi'.$v.'.bat';
-                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n$envs\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
+                file_put_contents(MPHPCGI_DIR_BIN.'\\'.$bat, "@echo off\n$envs\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
             }
             if($bin=self::php_bin($version)){
                 $created[]=$bat='php'.$v.'.bat';
-                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n$envs\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
+                file_put_contents(MPHPCGI_DIR_BIN.'\\'.$bat, "@echo off\n$envs\n\"%~dp0..\php\\$version\\".basename($bin)."\" %*\n");
             }
             return;
         });
@@ -479,12 +479,12 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             $batfull="php-cgi$version.bat";
             if(in_array($batfull, $created)){
                 $created[]=$bat='php-cgi'.$v.'.bat';
-                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n\"%~dp0$batfull\" %*\n");
+                file_put_contents(MPHPCGI_DIR_BIN.'\\'.$bat, "@echo off\n\"%~dp0$batfull\" %*\n");
             }
             $batfull="php$version.bat";
             if(in_array($batfull, $created)){
                 $created[]=$bat='php'.$v.'.bat';
-                file_put_contents(APP_DIR_BIN.'\\'.$bat, "@echo off\n\"%~dp0$batfull\" %*\n");
+                file_put_contents(MPHPCGI_DIR_BIN.'\\'.$bat, "@echo off\n\"%~dp0$batfull\" %*\n");
             }
             return;
         });
@@ -497,7 +497,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
                 return null;
             }
             return $name;
-        }, glob(APP_DIR_BIN.'/php*.bat')));
+        }, glob(MPHPCGI_DIR_BIN.'/php*.bat')));
     }
 
     /**
@@ -551,7 +551,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
         if(count($list)>0){
             $mypid=getmypid();
             $list=array_column(array_filter($list, function($row) use ($mypid){
-                return $row['ProcessId']!=$mypid && (strstr($row['CommandLine'], ROOT_DIR)!==false);
+                return $row['ProcessId']!=$mypid && (strstr($row['CommandLine'], MPHPCGI_ROOT_DIR)!==false);
             }), 'ProcessId');
             if(!self::taskkill(...$list)) throw new ResponseErr('Fallo al detener los procesos');
         }
@@ -584,7 +584,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
     }
 
     static function php_nts_list_online_file($reload=false){
-        exec('"'.APP_DIR_BIN.'/download_php_nts_list.bat" '.($reload?'-f':''), $out);
+        exec('"'.MPHPCGI_DIR_BIN.'/download_php_nts_list.bat" '.($reload?'-f':''), $out);
         if(($f=array_pop($out)) && is_file(($f))){
             $f=realpath($f);
         }
@@ -630,7 +630,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
         $server['Root']=realpath($line);
         echo "Ruta seleccionada: ".$server['Root']."\n\n";
 
-        if(substr($server['Root'], 0, 2)===substr(ROOT_DIR, 0, 2)){
+        if(substr($server['Root'], 0, 2)===substr(MPHPCGI_ROOT_DIR, 0, 2)){
             $server['Root']=substr($server['Root'], 2);
         }
         $server['Root']=str_replace('\\', '/', $server['Root']);
@@ -819,9 +819,9 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
      * @throws ResponseErr
      */
     private static function initServer(string $name, array $server, bool $replace=false){
-        $dest=APP_DIR_SITES.'/'.$name.'.conf';
+        $dest=MPHPCGI_DIR_SITES.'/'.$name.'.conf';
         if((file_exists($dest) && filesize($dest)>0) && !$replace) return false;
-        $tpl=file_get_contents(APP_DIR_INC.'/newserver.conf');
+        $tpl=file_get_contents(MPHPCGI_DIR_INC.'/newserver.conf');
         if(!$tpl) throw new ResponseErr('newserver.conf no encontrado');
         $replace=[
             '{{Root}}'=>$server['Root'] ?? null,
@@ -860,7 +860,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
         $ver=self::getNginxVer();
         $nginx=self::nginx_bin($ver, true);
         if(!$nginx) throw new ResponseErr("NGINX $ver no encontrado");
-        $cli=EasyCLI::newCleanEnv('', ROOT_DIR);
+        $cli=EasyCLI::newCleanEnv('', MPHPCGI_ROOT_DIR);
         self::initServers();
         self::php_make_bat();
         $servers=self::getServer_list();
@@ -873,18 +873,18 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             $maxProc=$server['CGIMaxProc'] ?? 8;
             if(!is_numeric($maxProc)) throw new ResponseErr('['.$name.'] CGIMaxProc inválido: '.$maxProc);
             $cmds[$name]=[
-                APP_DIR_BIN.'\hidec.exe',
-                APP_DIR_BIN.'\php-cgi-spawner.exe',
+                MPHPCGI_DIR_BIN.'\hidec.exe',
+                MPHPCGI_DIR_BIN.'\php-cgi-spawner.exe',
                 'php-cgi'.$server['PHP'].'.bat -d opcache.cache_id=mphp-cgi-'.$name,
                 $cgiport,
                 '0+'.$maxProc,
             ];
         }
         $cmds['nginx']=[
-            APP_DIR_BIN.'\hidec.exe',
+            MPHPCGI_DIR_BIN.'\hidec.exe',
             $nginx,
             '-p',
-            APP_DIR_USR.'\\conf-nginx-'.$ver,
+            MPHPCGI_DIR_USR.'\\conf-nginx-'.$ver,
         ];
         $pids=[];
         $fail=false;
@@ -917,7 +917,7 @@ set "OPENSSL_CONF=%OPENSSL_MODULES%\openssl_legacy.cnf"';
             $nginx,
             '-t',
             '-p',
-            APP_DIR_USR.'\\conf-nginx-'.$ver,
+            MPHPCGI_DIR_USR.'\\conf-nginx-'.$ver,
         ];
         $cmd=EasyCLI::command_args(...$cmd);
         $res=passthru($cmd);

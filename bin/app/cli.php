@@ -6,6 +6,17 @@ use MultiPHPCGI\ResponseErr;
 if(php_sapi_name()!=='cli') return;
 error_reporting(E_COMPILE_ERROR | E_RECOVERABLE_ERROR | E_ERROR | E_CORE_ERROR);
 require_once __DIR__.'/__use.php';
+ini_set('display_errors', 0);
+define('_DEF', "\033[0m");
+define('_RED', "\033[31m");
+define('_GREEN', "\033[32m");
+define('_YELL', "\033[33m");
+define('_BLUE', "\033[34m");
+define('_PURP', "\033[35m");
+define('_AQUA', "\033[36m");
+define('_GREY', "\033[37m");
+define('_BGRED', "\033[41m");
+define('_BGYEL', "\033[43m");
 
 $cli=new class{
     public $interative=false;
@@ -112,8 +123,8 @@ $cli=new class{
      * @return void
      */
     function ver(){
-        echo "MultiPHPCGI v".APP_VER."\n";
-        echo ROOT_DIR."\n";
+        echo "MultiPHPCGI v".MPHPCGI_VER."\n";
+        echo MPHPCGI_ROOT_DIR."\n";
     }
 
     /**
@@ -150,7 +161,7 @@ $cli=new class{
      */
     function nginx_log_clear(){
         $fail='';
-        $list=glob(APP_DIR_USR.'\\conf-nginx-*\\logs\\*.log');
+        $list=glob(MPHPCGI_DIR_USR.'\\conf-nginx-*\\logs\\*.log');
         foreach($list as $file){
             if(!unlink($file)) $fail.="Fail: $file\n";
             else echo "Clear: ".$file."\n";
